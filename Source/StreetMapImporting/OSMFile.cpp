@@ -60,7 +60,7 @@ bool FOSMFile::LoadOpenStreetMapFile( FString& OSMFilePath, const bool bIsFilePa
 	{
 		FeedbackContext->Logf(
 			ELogVerbosity::Error,
-			TEXT( "Failed to load OpenStreetMap XML file ('%s', Line %i)" ),
+			TEXT( "Failed to load OpenStreetMap XML file (""%s"", Line %i)" ),
 			*ErrorMessage.ToString(),
 			ErrorLineNumber );
 	}
