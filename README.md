@@ -34,7 +34,7 @@ If you're new to plugins in UE4, you can find lots of information [right here](h
 
 ## Getting OpenStreetMap Data
 
-**Important:**  OpenStreetMap data is licensed under the [ODC Open Database License (ODbL)](http://opendatacommons.org/licenses/odbl/).  If you use this data in your project, *make sure you understand and comply with the terms of that license*.
+**Legal:**  OpenStreetMap data is licensed under the [ODC Open Database License (ODbL)](http://opendatacommons.org/licenses/odbl/).  If you use this data in your project, *make sure you understand and comply with the terms of that license* e.g. lookup the [Legal FAQ](https://wiki.openstreetmap.org/wiki/Legal_FAQ).
 
 ![UE4OSMExport](Docs/UE4OSMExport.png)
 
