@@ -56,6 +56,15 @@ If you receive an error message after clicking **Export**, OpenStreetMap may be 
 
 Of course, there are many other places you can find raw OpenStreetMap XML data on the web also, but keep in mind the plugin has only been tested with files exported directly from OpenStreetMap so far.
 
+## Editing OpenStreetMap
+
+**Attention:** OSM covers the real world and includes only fact based knowledge. If you like to build up an fictional map, you can use the [JOSM offline editor](https://wiki.openstreetmap.org/wiki/JOSM), to create an local XML file, which you don't upload(!) to the project.
+
+You can easily contribute back to OSM, for example to improve your hometown. Just signup at www.openstreetmap.org and click at the edit tab. The online iD editor allows you to trace aerial imagery and to add POIs easily. To learn more details, just look over here:
+* http://learnosm.org
+* https://wiki.openstreetmap.org/wiki/Video_tutorials
+
+Please be aware, that the project community (the inhabitants!) is the essential part. Thus it's wise to [get in touch](https://wiki.openstreetmap.org/wiki/Contact_channels) with mappers close to you, to get more tips on local tagging, or unwritten rules. Happy mapping!
 
 ## Plugin Details
 
