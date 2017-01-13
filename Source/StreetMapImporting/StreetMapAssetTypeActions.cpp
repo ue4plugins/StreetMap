@@ -63,5 +63,4 @@ void FStreetMapAssetTypeActions::GetResolvedSourceFilePaths(const TArray<UObject
 	}
 }
 
-
 #undef LOCTEXT_NAMESPACE

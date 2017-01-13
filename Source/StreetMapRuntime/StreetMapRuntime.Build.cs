@@ -13,8 +13,9 @@ namespace UnrealBuildTool.Rules
 					"Engine",
 					"RHI",
 					"RenderCore",
-					"ShaderCore"
-				}
+					"ShaderCore",
+                    "PropertyEditor"
+                }
 			);
 		}
 	}
