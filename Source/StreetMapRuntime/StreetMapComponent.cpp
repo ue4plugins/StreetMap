@@ -2,28 +2,18 @@
 
 #include "StreetMapRuntime.h"
 #include "StreetMapComponent.h"
+#include "StreetMap.h"
 #include "StreetMapSceneProxy.h"
 #include "Runtime/Engine/Classes/Engine/StaticMesh.h"
 #include "Runtime/Engine/Public/StaticMeshResources.h"
 #include "PolygonTools.h"
 
-#include "PhysicsEngine/BodySetup.h"
 
-#if WITH_EDITOR
-#include "ModuleManager.h"
-#include "PropertyEditorModule.h"
-#endif //WITH_EDITOR
-
-
-
-UStreetMapComponent::UStreetMapComponent(const FObjectInitializer& ObjectInitializer)
-	: Super(ObjectInitializer),
-	CachedLocalBounds(FBox(0)),
-	StreetMap(nullptr)
+UStreetMapComponent::UStreetMapComponent( const FObjectInitializer& ObjectInitializer )
+	: Super( ObjectInitializer ),
+	  CachedLocalBounds( FBox( 0 ) )
 {
-	// We make sure our mesh collision profile name is set to NoCollisionProfileName at initialization. 
-	// Because we don't have collision data yet!
-	SetCollisionProfileName(UCollisionProfile::NoCollision_ProfileName);
+	SetCollisionProfileName( UCollisionProfile::NoCollision_ProfileName );
 
 	// We don't currently need to be ticked.  This can be overridden in a derived class though.
 	PrimaryComponentTick.bCanEverTick = false;
@@ -39,17 +29,15 @@ UStreetMapComponent::UStreetMapComponent(const FObjectInitializer& ObjectInitial
 	// Our mesh is too complicated to be a useful occluder.
 	bUseAsOccluder = false;
 
-	// Our mesh can influence navigation.
-	bCanEverAffectNavigation = true;
-
-	static ConstructorHelpers::FObjectFinder<UMaterialInterface> DefaultMaterialAsset(TEXT("/StreetMap/StreetMapDefaultMaterial"));
-	StreetMapDefaultMaterial = DefaultMaterialAsset.Object;
-
+	// We have no nav mesh support yet.
+	bCanEverAffectNavigation = false;
 }
 
 
 FPrimitiveSceneProxy* UStreetMapComponent::CreateSceneProxy()
 {
+	BuildMeshIfNeeded();
+	
 	FStreetMapSceneProxy* StreetMapSceneProxy = nullptr;
 
 	if( HasValidMesh() )
@@ -67,170 +55,39 @@ int32 UStreetMapComponent::GetNumMaterials() const
 	// NOTE: This is a bit of a weird thing about Unreal that we need to deal with when defining a component that
 	// can have materials assigned.  UPrimitiveComponent::GetNumMaterials() will return 0, so we need to override it 
 	// to return the number of overridden materials, which are the actual materials assigned to the component.
-	return HasValidMesh() ? GetNumMeshSections() : GetNumOverrideMaterials();
+	return GetNumOverrideMaterials();
 }
 
 
-void UStreetMapComponent::SetStreetMap(class UStreetMap* NewStreetMap, bool bClearPreviousMeshIfAny /*= false*/, bool bRebuildMesh /*= false */)
+void UStreetMapComponent::SetStreetMap( class UStreetMap* NewStreetMap )
 {
-	if (StreetMap != NewStreetMap)
+	if( StreetMap != NewStreetMap )
 	{
 		StreetMap = NewStreetMap;
 
-		if (bClearPreviousMeshIfAny)
-			InvalidateMesh();
-
-		if (bRebuildMesh)
-			BuildMesh();
+		InvalidateMesh();
 	}
 }
 
-
-bool UStreetMapComponent::GetPhysicsTriMeshData(struct FTriMeshCollisionData* CollisionData, bool InUseAllTriData)
-{
-
-	if (!CollisionSettings.bGenerateCollision || !HasValidMesh())
-	{
-		return false;
-	}
-
-	// Copy vertices data
-	const int32 NumVertices = Vertices.Num();
-	CollisionData->Vertices.Empty();
-	CollisionData->Vertices.AddUninitialized(NumVertices);
-
-	for (int32 VertexIndex = 0; VertexIndex < NumVertices; VertexIndex++)
-	{
-		CollisionData->Vertices[VertexIndex] = Vertices[VertexIndex].Position;
-	}
-
-	// Copy indices data
-	const int32 NumTriangles = Indices.Num() / 3;
-	FTriIndices TempTriangle;
-	for (int32 TriangleIndex = 0; TriangleIndex < NumTriangles * 3; TriangleIndex += 3)
-	{
-
-		TempTriangle.v0 = Indices[TriangleIndex + 0];
-		TempTriangle.v1 = Indices[TriangleIndex + 1];
-		TempTriangle.v2 = Indices[TriangleIndex + 2];
-
-
-		CollisionData->Indices.Add(TempTriangle);
-		CollisionData->MaterialIndices.Add(0);
-	}
-
-	CollisionData->bFlipNormals = true;
-	CollisionData->bDeformableMesh = true;
-
-	return HasValidMesh();
-}
-
-
-bool UStreetMapComponent::ContainsPhysicsTriMeshData(bool InUseAllTriData) const
-{
-	return HasValidMesh() && CollisionSettings.bGenerateCollision;
-}
-
-
-bool UStreetMapComponent::WantsNegXTriMesh()
-{
-	return false;
-}
-
-
-void UStreetMapComponent::CreateBodySetupIfNeeded(bool bForceCreation /*= false*/)
-{
-	if (StreetMapBodySetup == nullptr || bForceCreation == true)
-	{
-		// Creating new BodySetup Object.
-		StreetMapBodySetup = NewObject<UBodySetup>(this);
-		StreetMapBodySetup->BodySetupGuid = FGuid::NewGuid();
-		StreetMapBodySetup->bDoubleSidedGeometry = CollisionSettings.bAllowDoubleSidedGeometry;
-
-		// shapes per poly shape for collision (Not working in simulation mode).
-		StreetMapBodySetup->CollisionTraceFlag = CTF_UseComplexAsSimple;
-	}
-}
-
-
-void UStreetMapComponent::GenerateCollision()
-{
-	if (!CollisionSettings.bGenerateCollision || !HasValidMesh())
-	{
-		return;
-	}
-
-	// create a new body setup
-	CreateBodySetupIfNeeded(true);
-
-
-	if (GetCollisionProfileName() == UCollisionProfile::NoCollision_ProfileName)
-	{
-		SetCollisionProfileName(UCollisionProfile::BlockAll_ProfileName);
-	}
-
-	// Rebuild the body setup
-#if WITH_EDITOR || WITH_RUNTIME_PHYSICS_COOKING
-	StreetMapBodySetup->InvalidatePhysicsData();
-#endif
-	StreetMapBodySetup->CreatePhysicsMeshes();
-
-	UpdateNavigationIfNeeded();
-}
-
-
-void UStreetMapComponent::ClearCollision()
-{
-
-	if (StreetMapBodySetup != nullptr)
-	{
-#if WITH_RUNTIME_PHYSICS_COOKING || WITH_EDITOR
-		StreetMapBodySetup->InvalidatePhysicsData();
-#endif
-		StreetMapBodySetup = nullptr;
-	}
-
-	if (GetCollisionProfileName() != UCollisionProfile::NoCollision_ProfileName)
-	{
-		SetCollisionProfileName(UCollisionProfile::NoCollision_ProfileName);
-	}
-
-	UpdateNavigationIfNeeded();
-}
-
-class UBodySetup* UStreetMapComponent::GetBodySetup()
-{
-	if (CollisionSettings.bGenerateCollision == true)
-	{
-		// checking if we have a valid body setup. 
-		// A new one is created only if a valid body setup is not found.
-		CreateBodySetupIfNeeded();
-		return StreetMapBodySetup;
-	}
-
-	if (StreetMapBodySetup != nullptr) StreetMapBodySetup = nullptr;
-
-	return nullptr;
-}
 
 void UStreetMapComponent::GenerateMesh()
 {
 	/////////////////////////////////////////////////////////
 	// Visual tweakables for generated Street Map mesh
 	//
-	const float RoadZ = MeshBuildSettings.RoadOffesetZ;
-	const bool bWant3DBuildings = MeshBuildSettings.bWant3DBuildings;
-	const bool bWantLitBuildings = MeshBuildSettings.bWantLitBuildings;
+	const float RoadZ = 0.0f;
+	const bool bWant3DBuildings = true;
+	const bool bWantLitBuildings = true;
 	const bool bWantBuildingBorderOnGround = !bWant3DBuildings;
-	const float StreetThickness = MeshBuildSettings.StreetThickness;
-	const FColor StreetColor = MeshBuildSettings.StreetColor.ToFColor( false );
-	const float MajorRoadThickness = MeshBuildSettings.MajorRoadThickness;
-	const FColor MajorRoadColor = MeshBuildSettings.MajorRoadColor.ToFColor( false );
-	const float HighwayThickness = MeshBuildSettings.HighwayThickness;
-	const FColor HighwayColor = MeshBuildSettings.HighwayColor.ToFColor( false );
-	const float BuildingBorderThickness = MeshBuildSettings.BuildingBorderThickness;
-	FLinearColor BuildingBorderLinearColor = MeshBuildSettings.BuildingBorderLinearColor;
-	const float BuildingBorderZ = MeshBuildSettings.BuildingBorderZ;
+	const float StreetThickness = 800.0f;
+	const FColor StreetColor = FLinearColor( 0.05f, 0.75f, 0.05f ).ToFColor( false );
+	const float MajorRoadThickness = 1000.0f;
+	const FColor MajorRoadColor = FLinearColor( 0.15f, 0.85f, 0.15f ).ToFColor( false );
+	const float HighwayThickness = 1400.0f;
+	const FColor HighwayColor = FLinearColor( 0.25f, 0.95f, 0.25f ).ToFColor( false );
+	const float BuildingBorderThickness = 20.0f;
+	FLinearColor BuildingBorderLinearColor( 0.85f, 0.85f, 0.85f );
+	const float BuildingBorderZ = 10.0f;
 	const FColor BuildingBorderColor( BuildingBorderLinearColor.ToFColor( false ) );
 	const FColor BuildingFillColor( FLinearColor( BuildingBorderLinearColor * 0.33f ).CopyWithNewOpacity( 1.0f ).ToFColor( false ) );
 	/////////////////////////////////////////////////////////
@@ -427,102 +284,50 @@ void UStreetMapComponent::GenerateMesh()
 
 
 #if WITH_EDITOR
-void UStreetMapComponent::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
+void UStreetMapComponent::PostEditChangeProperty( FPropertyChangedEvent& PropertyChangedEvent )
 {
-	bool bNeedRefreshCustomizationModule = false;
+	bool bNeedNewData = false;
 
-	// Check to see if the "StreetMap" property changed.
-	if (PropertyChangedEvent.Property != nullptr)
+	// Check to see if the "StreetMap" property changed.  If so, we'll need to rebuild our mesh.
+	if( PropertyChangedEvent.Property != nullptr )
 	{
-		const FName PropertyName(PropertyChangedEvent.Property->GetFName());
-		if (PropertyName == GET_MEMBER_NAME_CHECKED(UStreetMapComponent, StreetMap))
+		const FName PropertyName( PropertyChangedEvent.Property->GetFName() );
+		if( PropertyName == GET_MEMBER_NAME_CHECKED( UStreetMapComponent, StreetMap ) )
 		{
-			bNeedRefreshCustomizationModule = true;
-		}
-		else if (IsCollisionProperty(PropertyName)) // For some unknown reason , GET_MEMBER_NAME_CHECKED(UStreetMapComponent, CollisionSettings) is not working ??? "TO CHECK LATER"
-		{
-			if (CollisionSettings.bGenerateCollision == true)
-			{
-				GenerateCollision();
-			}
-			else
-			{
-				ClearCollision();
-			}
-			bNeedRefreshCustomizationModule = true;
+			bNeedNewData = true;
 		}
 	}
 
-	if (bNeedRefreshCustomizationModule)
+	if( bNeedNewData )
 	{
-		FPropertyEditorModule& PropertyModule = FModuleManager::GetModuleChecked<FPropertyEditorModule>("PropertyEditor");
-		PropertyModule.NotifyCustomizationModuleChanged();
+		InvalidateMesh();
 	}
 
 	// Call the parent implementation of this function
-	Super::PostEditChangeProperty(PropertyChangedEvent);
+	Super::PostEditChangeProperty( PropertyChangedEvent );
 }
 #endif	// WITH_EDITOR
 
 
-void UStreetMapComponent::BuildMesh()
+void UStreetMapComponent::BuildMeshIfNeeded()
 {
-	// Wipes out our cached mesh data. Maybe unnecessary in case GenerateMesh is clearing cached mesh data and creating a new SceneProxy  !
-	InvalidateMesh();
-
-	GenerateMesh();
-
-	if (HasValidMesh())
+	const bool bNeedNewMesh = !HasValidMesh();
+	if( bNeedNewMesh )
 	{
-		// We have a new bounding box
-		UpdateBounds();
-	}
-	else
-	{
-		// No mesh was generated
-	}
+		GenerateMesh();
 
-	GenerateCollision();
-
-	// Mark our render state dirty so that CreateSceneProxy can refresh it on demand
-	MarkRenderStateDirty();
-
-	AssignDefaultMaterialIfNeeded();
-
-	Modify();
-}
-
-
-void UStreetMapComponent::AssignDefaultMaterialIfNeeded()
-{
-	if (this->GetNumMaterials() == 0 || this->GetMaterial(0) == nullptr)
-	{
-		if (!HasValidMesh() || GetDefaultMaterial() == nullptr)
-			return;
-
-		this->SetMaterial(0, GetDefaultMaterial());
+		if( HasValidMesh() )
+		{
+			// We have a new bounding box
+			UpdateBounds();
+		}
+		else
+		{
+			// No mesh was generated
+		}
 	}
 }
 
-
-void UStreetMapComponent::UpdateNavigationIfNeeded()
-{
-	if (bCanEverAffectNavigation || bNavigationRelevant)
-	{
-		UNavigationSystem::UpdateComponentInNavOctree(*this);
-	}
-}
-
-void UStreetMapComponent::InvalidateMesh()
-{
-	Vertices.Reset();
-	Indices.Reset();
-	CachedLocalBounds = FBoxSphereBounds(FBox(0));
-	ClearCollision();
-	// Mark our render state dirty so that CreateSceneProxy can refresh it on demand
-	MarkRenderStateDirty();
-	Modify();
-}
 
 FBoxSphereBounds UStreetMapComponent::CalcBounds( const FTransform& LocalToWorld ) const
 {
@@ -616,8 +421,15 @@ void UStreetMapComponent::AddTriangles( const TArray<FVector>& Points, const TAr
 };
 
 
-FString UStreetMapComponent::GetStreetMapAssetName() const
+void UStreetMapComponent::InvalidateMesh()
 {
-	return StreetMap != nullptr ? StreetMap->GetName() : FString(TEXT("NONE"));
+	Vertices.Reset();
+	Indices.Reset();
+	CachedLocalBounds = FBoxSphereBounds( FBox( 0 ) );
+
+	// Mark our render state dirty so that CreateSceneProxy can refresh it on demand
+	MarkRenderStateDirty();
 }
+
+
 

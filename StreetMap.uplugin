@@ -11,7 +11,7 @@
 	"MarketplaceURL" : "",
 	"SupportURL" : "",
 	"EnabledByDefault" : true,
-	"CanContainContent" : true,
+	"CanContainContent" : false,
 	"IsBetaVersion" : false,
 	"Installed" : false,
 	"Modules" :
@@ -24,12 +24,6 @@
 	
 		{
 			"Name" : "StreetMapImporting",
-			"Type" : "Editor",
-			"LoadingPhase" : "Default"
-		},
-
-		{
-			"Name" : "StreetMapEditor",
 			"Type" : "Editor",
 			"LoadingPhase" : "Default"
 		}
