@@ -23,7 +23,9 @@ It's easy to get up and running:
 
 * Load the editor.  You can now drag and drop **OpenStreetMap XML files** (.osm) into Content Browser to import map data!
 
-* Create a **Street Map Component** and assign your new asset to the component's **Street Map** property.  You should now see your streets and buildings in the 3D viewport.
+* Drag and Drop imported **Street Map Data Asset** into the viewport and a **Street Map Actor** will be automatically generated. You should now see your streets and buildings in the 3D viewport.
+
+![UE4OSMManhattan](Docs/UE4OSMActor.png)
 
 ![UE4OSMManhattan](Docs/UE4OSMManhattan.png)
 
