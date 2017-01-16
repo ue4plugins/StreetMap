@@ -26,12 +26,6 @@
 			"Name" : "StreetMapImporting",
 			"Type" : "Editor",
 			"LoadingPhase" : "Default"
-		},
-
-		{
-			"Name" : "StreetMapEditor",
-			"Type" : "Editor",
-			"LoadingPhase" : "Default"
 		}
   ]
 }

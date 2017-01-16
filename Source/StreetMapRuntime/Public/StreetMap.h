@@ -12,6 +12,7 @@ struct STREETMAPRUNTIME_API FStreetMapCollisionSettings
 
 public:
 
+
 	/** Uses triangle mesh data for collision data. (Cannot be used for physics simulation). */
 	UPROPERTY(EditAnywhere, Category = "StreetMap")
 		uint32 bGenerateCollision : 1;

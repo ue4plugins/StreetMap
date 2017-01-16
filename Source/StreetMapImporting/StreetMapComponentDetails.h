@@ -35,7 +35,7 @@ public:
 
 protected:
 	/** Holds Selected Street Map Component */
-	 UStreetMapComponent* SelectedStreetMapComponent;
+	 class UStreetMapComponent* SelectedStreetMapComponent;
 
 	 /** Holds Last Detail Builder Pointer */
 	 IDetailLayoutBuilder*  LastDetailBuilderPtr;

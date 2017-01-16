@@ -1,6 +1,26 @@
 // Copyright 2017 Mike Fricker. All Rights Reserved.
 
-#include "StreetMapEditor.h"
+#include "StreetMapImporting.h"
+
+#include "StreetMapComponentDetails.h"
+
+#include "SlateBasics.h"
+#include "RawMesh.h"
+#include "PropertyEditorModule.h"
+#include "DetailLayoutBuilder.h"
+#include "DetailCategoryBuilder.h"
+#include "DetailWidgetRow.h"
+#include "PropertyCustomizationHelpers.h"
+#include "IDetailsView.h"
+#include "AssetRegistryModule.h"
+#include "DlgPickAssetPath.h"
+
+#include "SNotificationList.h"
+#include "NotificationManager.h"
+#include "AssertionMacros.h"
+
+
+#include "StreetMapComponent.h"
 
 
 #define LOCTEXT_NAMESPACE "StreetMapComponentDetails"
@@ -71,11 +91,9 @@ void FStreetMapComponentDetails::CustomizeDetails(IDetailLayoutBuilder& DetailBu
 	const bool bCanClearMesh = HasValidMeshData();
 	const bool bCanCreateMeshAsset = HasValidMeshData();
 
-
-
 	TSharedPtr< SHorizontalBox > TempHorizontalBox;
 
-	StreetMapCategory.AddCustomRow(FText::GetEmpty(), true)
+	StreetMapCategory.AddCustomRow(FText::GetEmpty(), false)
 		[
 			SAssignNew(TempHorizontalBox, SHorizontalBox)
 			+ SHorizontalBox::Slot()
@@ -107,7 +125,7 @@ void FStreetMapComponentDetails::CustomizeDetails(IDetailLayoutBuilder& DetailBu
 		];
 
 
-	StreetMapCategory.AddCustomRow(FText::GetEmpty(), true)
+	StreetMapCategory.AddCustomRow(FText::GetEmpty(), false)
 		[
 			SAssignNew(TempHorizontalBox, SHorizontalBox)
 			+ SHorizontalBox::Slot()
