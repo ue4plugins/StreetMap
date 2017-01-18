@@ -18,8 +18,8 @@
 
 UStreetMapComponent::UStreetMapComponent(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer),
-	CachedLocalBounds(FBox(0)),
-	StreetMap(nullptr)
+	  StreetMap(nullptr),
+	  CachedLocalBounds(FBox(0))
 {
 	// We make sure our mesh collision profile name is set to NoCollisionProfileName at initialization. 
 	// Because we don't have collision data yet!
