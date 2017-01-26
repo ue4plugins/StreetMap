@@ -7,9 +7,9 @@
 
 
 // Latitude/longitude scale factor
-//			- http://wiki.openstreetmap.org/wiki/Slippy_map_tilenames
 //			- http://en.wikipedia.org/wiki/Equator#Exact_length_of_the_Equator
-const double UStreetMapFactory::LatitudeLongitudeScale = 4.0075e7;
+static const double EarthCircumference = 40075160.0;
+const double UStreetMapFactory::LatitudeLongitudeScale = EarthCircumference / 360.0; // meters per degree
 
 
 UStreetMapFactory::UStreetMapFactory(const FObjectInitializer& ObjectInitializer)
@@ -60,13 +60,13 @@ bool UStreetMapFactory::LoadFromOpenStreetMapXMLFile( UStreetMap* StreetMap, FSt
 	/** Converts latitude to meters */
 	auto ConvertLatitudeToMeters = []( const double Latitude ) -> double
 	{
-		return -( ( FMath::Loge( FMath::Tan( FMath::DegreesToRadians( Latitude ) ) + 1.0 / FMath::Cos( FMath::DegreesToRadians( Latitude ) ) ) / PI ) / 2.0 ) * LatitudeLongitudeScale * 0.5f;
+		return -Latitude * LatitudeLongitudeScale;
 	};
 
 	// Converts longitude to meters
-	auto ConvertLongitudeToMeters = []( const double Longitude ) -> double
+	auto ConvertLongitudeToMeters = []( const double Longitude, const double Latitude ) -> double
 	{
-		return ( ( Longitude + 180.0 ) / 360.0 ) * LatitudeLongitudeScale * 0.5f;
+		return Longitude * LatitudeLongitudeScale * FMath::Cos( FMath::DegreesToRadians( Latitude ) );
 	};
 
 	// Converts latitude and longitude to X/Y coordinates, relative to some other latitude/longitude
@@ -77,7 +77,7 @@ bool UStreetMapFactory::LoadFromOpenStreetMapXMLFile( UStreetMap* StreetMap, FSt
 		const double RelativeToLongitude ) -> FVector2D
 	{
 		return FVector2D(
-			(float)( ConvertLongitudeToMeters( Longitude ) - ConvertLongitudeToMeters( RelativeToLongitude ) ),
+			(float)( ConvertLongitudeToMeters( Longitude, Latitude ) - ConvertLongitudeToMeters( RelativeToLongitude, Latitude ) ),
 			(float)( ConvertLatitudeToMeters( Latitude ) - ConvertLatitudeToMeters( RelativeToLatitude ) ) );
 	};
 
