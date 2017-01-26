@@ -7,8 +7,8 @@
 
 
 // Latitude/longitude scale factor
-//			- http://en.wikipedia.org/wiki/Equator#Exact_length_of_the_Equator
-static const double EarthCircumference = 40075160.0;
+//			- https://en.wikipedia.org/wiki/Equator#Exact_length
+static const double EarthCircumference = 40075036.0;
 const double UStreetMapFactory::LatitudeLongitudeScale = EarthCircumference / 360.0; // meters per degree
 
 
@@ -57,7 +57,7 @@ bool UStreetMapFactory::LoadFromOpenStreetMapXMLFile( UStreetMap* StreetMap, FSt
 	const float OSMToCentimetersScaleFactor = 100.0f;
 
 
-	/** Converts latitude to meters */
+	// Converts latitude to meters
 	auto ConvertLatitudeToMeters = []( const double Latitude ) -> double
 	{
 		return -Latitude * LatitudeLongitudeScale;
@@ -76,6 +76,7 @@ bool UStreetMapFactory::LoadFromOpenStreetMapXMLFile( UStreetMap* StreetMap, FSt
 		const double RelativeToLatitude, 
 		const double RelativeToLongitude ) -> FVector2D
 	{
+		// Applies Sanson-Flamsteed (sinusoidal) Projection (see http://www.progonos.com/furuti/MapProj/Normal/CartHow/HowSanson/howSanson.html)
 		return FVector2D(
 			(float)( ConvertLongitudeToMeters( Longitude, Latitude ) - ConvertLongitudeToMeters( RelativeToLongitude, Latitude ) ),
 			(float)( ConvertLatitudeToMeters( Latitude ) - ConvertLatitudeToMeters( RelativeToLatitude ) ) );
