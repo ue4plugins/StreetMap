@@ -1,7 +1,116 @@
 // Copyright 2017 Mike Fricker. All Rights Reserved.
+
 #pragma once
 
 #include "StreetMap.generated.h"
+
+
+USTRUCT(BlueprintType)
+struct STREETMAPRUNTIME_API FStreetMapCollisionSettings
+{
+	GENERATED_USTRUCT_BODY()
+
+public:
+
+
+	/** Uses triangle mesh data for collision data. (Cannot be used for physics simulation). */
+	UPROPERTY(EditAnywhere, Category = "StreetMap")
+		uint32 bGenerateCollision : 1;
+
+	/**
+	*	If true, the physics triangle mesh will use double sided faces when doing scene queries.
+	*	This is useful for planes and single sided meshes that need traces to work on both sides.
+	*/
+	UPROPERTY(EditAnywhere, Category = "StreetMap", meta = (editcondition = "bGenerateCollision"))
+		uint32 bAllowDoubleSidedGeometry : 1;
+
+
+	FStreetMapCollisionSettings() :
+		bGenerateCollision(false),
+		bAllowDoubleSidedGeometry(false)
+	{
+
+	}
+
+};
+
+/** Mesh generation settings */
+USTRUCT(BlueprintType)
+struct STREETMAPRUNTIME_API FStreetMapMeshBuildSettings
+{
+	GENERATED_USTRUCT_BODY()
+
+public:
+
+	/** Roads base vertical offset */
+	UPROPERTY(Category = StreetMap, EditAnywhere, meta = (ClampMin = "0", UIMin = "0"), DisplayName = "Road Vertical Offset")
+		float RoadOffesetZ;
+
+	/** if true buildings mesh will be 3D instead of flat representation. */
+	UPROPERTY(Category = StreetMap, EditAnywhere, DisplayName = "Create 3D Buildings")
+	uint32 bWant3DBuildings : 1;
+
+	/**
+	* If true, buildings mesh will receive light information.
+	* Lit buildings can't share vertices beyond quads (all quads have their own face normals), so this uses a lot more geometry.
+	*/
+	UPROPERTY(Category = StreetMap, EditAnywhere, DisplayName = "Lit buildings")
+	uint32 bWantLitBuildings : 1;
+
+	/** Streets thickness */
+	UPROPERTY(Category = StreetMap, EditAnywhere, meta = (ClampMin = "0", UIMin = "0"))
+		float StreetThickness;
+
+	/** Street vertex color */
+	UPROPERTY(Category = StreetMap, EditAnywhere)
+		FLinearColor StreetColor;
+
+	/** Major road thickness */
+	UPROPERTY(Category = StreetMap, EditAnywhere, meta = (ClampMin = "0", UIMin = "0"))
+		float MajorRoadThickness;
+
+	/** Major road vertex color */
+	UPROPERTY(Category = StreetMap, EditAnywhere)
+		FLinearColor MajorRoadColor;
+
+	/** Highway thickness */
+	UPROPERTY(Category = StreetMap, EditAnywhere, meta = (ClampMin = "0", UIMin = "0"))
+		float HighwayThickness;
+
+	/** Highway vertex color */
+	UPROPERTY(Category = StreetMap, EditAnywhere)
+		FLinearColor HighwayColor;
+
+	/** Streets Thickness */
+	UPROPERTY(Category = StreetMap, EditAnywhere, meta = (ClampMin = "0", UIMin = "0"))
+		float BuildingBorderThickness;
+
+	/** Building border vertex color */
+	UPROPERTY(Category = StreetMap, EditAnywhere)
+		FLinearColor BuildingBorderLinearColor;
+
+	/** Buildings border vertical offset */
+	UPROPERTY(Category = StreetMap, EditAnywhere, meta = (ClampMin = "0", UIMin = "0"))
+		float BuildingBorderZ;
+
+	FStreetMapMeshBuildSettings() :
+		RoadOffesetZ(0.0f),
+		bWant3DBuildings(true),
+		bWantLitBuildings(true),
+		StreetThickness(800.0f),
+		StreetColor(0.05f, 0.75f, 0.05f),
+		MajorRoadThickness(1000.0f),
+		MajorRoadColor(0.15f, 0.85f, 0.15f),
+		HighwayThickness(1400.0f),
+		HighwayColor(FLinearColor(0.25f, 0.95f, 0.25f)),
+		BuildingBorderThickness(20.0f),
+		BuildingBorderLinearColor(0.85f, 0.85f, 0.85f),
+		BuildingBorderZ(10.0f)
+	{
+	}
+
+};
+
 
 
 /** Types of roads */

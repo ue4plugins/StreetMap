@@ -1,6 +1,6 @@
 # Street Map Plugin for UE4
 
-This plugin allows you to import **OpenStreetMap** XML data your **Unreal Engine 4** project as a new StreetMap asset type.  You can use the example **Street Map Component** to render streets and buildings.
+This plugin allows you to import **OpenStreetMap** XML data into your **Unreal Engine 4** project as a new StreetMap asset type.  You can use the example **Street Map Component** to render streets and buildings.
 
 ![UE4OSMBrooklyn](Docs/UE4OSMBrooklyn.png)
 
@@ -23,9 +23,10 @@ It's easy to get up and running:
 
 * Load the editor.  You can now drag and drop **OpenStreetMap XML files** (.osm) into Content Browser to import map data!
 
-* Create a **Street Map Component** and assign your new asset to the component's **Street Map** property.  You should now see your streets and buildings in the 3D viewport.
+* Drag and Drop imported **Street Map Data Asset** into the viewport and a **Street Map Actor** will be automatically generated. You should now see your streets and buildings in the 3D viewport.
 
-![UE4OSMManhattan](Docs/UE4OSMManhattan.png)
+![UE4OSMManhattan](Docs/UE4OSMActor.png)
+
 
 If the rebuild was successful but you don't see the new features, double check that the **Street Map** plugin is enabled by clicking the **Settings** toolbar button, then click **Plugins**.  Locate the **Street Map** plugin and make sure **Enabled** is checked.
 
@@ -34,7 +35,7 @@ If you're new to plugins in UE4, you can find lots of information [right here](h
 
 ## Getting OpenStreetMap Data
 
-**Important:**  OpenStreetMap data is licensed under the [ODC Open Database License (ODbL)](http://opendatacommons.org/licenses/odbl/).  If you use this data in your project, *make sure you understand and comply with the terms of that license*.
+**Legal:**  OpenStreetMap data is licensed under the [ODC Open Database License (ODbL)](http://opendatacommons.org/licenses/odbl/).  If you use this data in your project, *make sure you understand and comply with the terms of that license* e.g. lookup the [Legal FAQ](https://wiki.openstreetmap.org/wiki/Legal_FAQ).
 
 ![UE4OSMExport](Docs/UE4OSMExport.png)
 
@@ -56,6 +57,15 @@ If you receive an error message after clicking **Export**, OpenStreetMap may be 
 
 Of course, there are many other places you can find raw OpenStreetMap XML data on the web also, but keep in mind the plugin has only been tested with files exported directly from OpenStreetMap so far.
 
+## Editing OpenStreetMap
+
+**Attention:** OSM covers the real world and includes only fact based knowledge. If you like to build up an fictional map, you can use the [JOSM offline editor](https://wiki.openstreetmap.org/wiki/JOSM), to create an local XML file, which you don't upload(!) to the project.
+
+You can easily contribute back to OSM, for example to improve your hometown. Just signup at www.openstreetmap.org and click at the edit tab. The online iD editor allows you to trace aerial imagery and to add POIs easily. To learn more details, just look over here:
+* http://learnosm.org
+* https://wiki.openstreetmap.org/wiki/Video_tutorials
+
+Please be aware, that the project community (the inhabitants!) is the essential part. Thus it's wise to [get in touch](https://wiki.openstreetmap.org/wiki/Contact_channels) with mappers close to you, to get more tips on local tagging, or unwritten rules. Happy mapping!
 
 ## Plugin Details
 

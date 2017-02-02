@@ -3,6 +3,8 @@
 #include "StreetMapImporting.h"
 #include "StreetMapAssetTypeActions.h"
 #include "ModuleManager.h"
+#include "StreetMapStyle.h"
+#include "StreetMapComponentDetails.h"
 
 
 class FStreetMapImportingModule : public IModuleInterface
@@ -28,6 +30,14 @@ void FStreetMapImportingModule::StartupModule()
 	IAssetTools& AssetTools = FModuleManager::LoadModuleChecked<FAssetToolsModule>( "AssetTools" ).Get();
 	StreetMapAssetTypeActions = MakeShareable( new FStreetMapAssetTypeActions() );
 	AssetTools.RegisterAssetTypeActions( StreetMapAssetTypeActions.ToSharedRef() );
+
+	// Initialize & Register StreetMap Style
+	FStreetMapStyle::Initialize();
+
+	// Register StreetMapComponent Detail Customization
+	FPropertyEditorModule& PropertyModule = FModuleManager::GetModuleChecked<FPropertyEditorModule>("PropertyEditor");
+	PropertyModule.RegisterCustomClassLayout("StreetMapComponent", FOnGetDetailCustomizationInstance::CreateStatic(&FStreetMapComponentDetails::MakeInstance));
+	PropertyModule.NotifyCustomizationModuleChanged();
 }
 
 
@@ -39,5 +49,15 @@ void FStreetMapImportingModule::ShutdownModule()
 		IAssetTools& AssetTools = FModuleManager::GetModuleChecked<FAssetToolsModule>( "AssetTools" ).Get();
 		AssetTools.UnregisterAssetTypeActions( StreetMapAssetTypeActions.ToSharedRef() );
 		StreetMapAssetTypeActions.Reset();
+	}
+
+	// Unregister StreetMap Style
+	FStreetMapStyle::Shutdown();
+
+	if (FModuleManager::Get().IsModuleLoaded("PropertyEditor"))
+	{
+		FPropertyEditorModule& PropertyModule = FModuleManager::GetModuleChecked<FPropertyEditorModule>("PropertyEditor");
+		PropertyModule.UnregisterCustomClassLayout("StreetMapComponent");
+		PropertyModule.NotifyCustomizationModuleChanged();
 	}
 }
