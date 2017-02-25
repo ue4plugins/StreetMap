@@ -12,9 +12,10 @@
 #include "DetailWidgetRow.h"
 #include "PropertyCustomizationHelpers.h"
 #include "IDetailsView.h"
+#include "IDetailCustomization.h"
 #include "AssetRegistryModule.h"
 #include "DlgPickAssetPath.h"
-
+#include "IDetailCustomization.h"
 #include "SNotificationList.h"
 #include "NotificationManager.h"
 #include "AssertionMacros.h"
