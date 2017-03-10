@@ -14,6 +14,11 @@ class STREETMAPRUNTIME_API AStreetMapActor : public AActor
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "StreetMap")
 		class UStreetMapComponent* StreetMapComponent;
 
+	/**  Actor that represents a the landscape below the Streetmap */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Landscape")
+		class ALandscape* Landscape;
+
 public: 
 	FORCEINLINE class UStreetMapComponent* GetStreetMapComponent() { return StreetMapComponent; }
+	FORCEINLINE class ALandscape* GetLandscape() { return Landscape; }
 };
