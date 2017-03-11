@@ -17,6 +17,9 @@ namespace UnrealBuildTool.Rules
                     "PropertyEditor",
                     "Landscape",
                     "HTTP",
+                    "ImageWrapper",
+                    "SlateCore",
+                    "Slate",
                 }
 			);
         }

@@ -9,8 +9,24 @@
 #include "Interfaces/IHttpResponse.h"
 #include "HttpManager.h"
 #include "Misc/ScopedSlowTask.h"
+#include "Interfaces/IImageWrapperModule.h"
+#include "SNotificationList.h"
+#include "NotificationManager.h"
 
 #define LOCTEXT_NAMESPACE "StreetMap"
+
+static void ShowErrorMessage(const FText& MessageText)
+{
+	FNotificationInfo Info(MessageText);
+	Info.ExpireDuration = 8.0f;
+	Info.bUseLargeFont = false;
+	TSharedPtr<SNotificationItem> Notification = FSlateNotificationManager::Get().AddNotification(Info);
+	if (Notification.IsValid())
+	{
+		Notification->SetCompletionState(SNotificationItem::CS_Fail);
+		Notification->ExpireAndFadeout();
+	}
+}
 
 class FCachedElevationFile
 {
@@ -27,16 +43,55 @@ private:
 
 	TSharedPtr<IHttpRequest> HttpRequest;
 
+	bool UnpackElevation(const TArray<uint8>& RawData)
+	{
+		IImageWrapperModule& ImageWrapperModule = FModuleManager::LoadModuleChecked<IImageWrapperModule>(FName("ImageWrapper"));
+
+		IImageWrapperPtr PngImageWrapper = ImageWrapperModule.CreateImageWrapper(EImageFormat::PNG);
+		if (PngImageWrapper.IsValid() && PngImageWrapper->SetCompressed(RawData.GetData(), RawData.Num()))
+		{
+			int32 BitDepth = PngImageWrapper->GetBitDepth();
+			ERGBFormat::Type Format = PngImageWrapper->GetFormat();
+			
+			if ((Format != ERGBFormat::RGBA && Format != ERGBFormat::BGRA) || BitDepth > 8)
+			{
+				GWarn->Logf(ELogVerbosity::Error, TEXT("PNG file contains elevation data in an unsupported format."));
+				return false;
+			}
+
+			if (BitDepth <= 8)
+			{
+				BitDepth = 8;
+			}
+
+			PngImageWrapper->GetWidth();
+			PngImageWrapper->GetHeight();
+			const TArray<uint8>* RawPNG = nullptr;
+			if (PngImageWrapper->GetRaw(Format, BitDepth, RawPNG))
+			{
+
+			}
+
+			return true;
+		}
+
+		return false;
+	}
+
 	void OnDownloadSucceeded(FHttpResponsePtr Response)
 	{
 		// unpack data
-		TArray<uint8> Out;
 		if (Response.IsValid())
 		{
-			Out.Append(Response->GetContent());
-		}
+			auto Content = Response->GetContent();
+			if (!UnpackElevation(Content))
+			{
+				Failed = true;
+				return;
+			}
 
-		// TODO: write data to cache
+			// TODO: write data to cache
+		}
 
 		WasDownloadASuccess = true;
 	}
@@ -60,6 +115,17 @@ public:
 	bool HasFinished() const
 	{
 		return WasDownloadASuccess || Failed;
+	}
+
+	bool Succeeded() const
+	{
+		return WasDownloadASuccess;
+	}
+
+	void CancelRequest()
+	{
+		Failed = true;
+		HttpRequest->CancelRequest();
 	}
 
 	void Tick()
@@ -113,6 +179,8 @@ AStreetMapActor::AStreetMapActor(const FObjectInitializer& ObjectInitializer)
 	StreetMapComponent = CreateDefaultSubobject<UStreetMapComponent>(TEXT("StreetMapComp"));
 	RootComponent = StreetMapComponent;
 
+	if (!GIsEditor) return;
+
 	UWorld* const World = GetWorld();
 	if (World && !Landscape)
 	{
@@ -130,7 +198,7 @@ AStreetMapActor::AStreetMapActor(const FObjectInitializer& ObjectInitializer)
 		FilesToDownload.Add(MakeShared<FCachedElevationFile>(2, 2, 2));
 
 		TArray<TSharedPtr<FCachedElevationFile>> FilesDownloaded;
-		const uint32 NumFilesToDownload = FilesToDownload.Num();
+		const int32 NumFilesToDownload = FilesToDownload.Num();
 		while (FilesToDownload.Num())
 		{
 			FHttpModule::Get().GetHttpManager().Tick(0);
@@ -140,7 +208,7 @@ AStreetMapActor::AStreetMapActor(const FObjectInitializer& ObjectInitializer)
 				break;
 			}
 
-			float progress = 0.0f;
+			float Progress = 0.0f;
 			for (auto FileToDownload : FilesToDownload)
 			{
 				FileToDownload->Tick();
@@ -148,8 +216,21 @@ AStreetMapActor::AStreetMapActor(const FObjectInitializer& ObjectInitializer)
 				if (FileToDownload->HasFinished())
 				{
 					FilesToDownload.Remove(FileToDownload);
-					FilesDownloaded.Add(FileToDownload);
-					progress = 1.0f / (float)NumFilesToDownload;
+					Progress = 1.0f / (float)NumFilesToDownload;
+
+					if (FileToDownload->Succeeded())
+					{
+						FilesDownloaded.Add(FileToDownload);
+					}
+					else
+					{
+						// We failed to download one file so cancel the rest because we cannot proceed without it.
+						for (auto FileToCancel : FilesToDownload)
+						{
+							FileToCancel->CancelRequest();
+						}
+						FilesToDownload.Empty();
+					}
 					break;
 				}
 			}
@@ -157,9 +238,15 @@ AStreetMapActor::AStreetMapActor(const FObjectInitializer& ObjectInitializer)
 			FFormatNamedArguments Arguments;
 			Arguments.Add(TEXT("NumFilesDownloaded"), FText::AsNumber(FilesDownloaded.Num()));
 			Arguments.Add(TEXT("NumFilesToDownload"), FText::AsNumber(NumFilesToDownload));
-			SlowTask.EnterProgressFrame(progress, FText::Format(LOCTEXT("DownloadingElevationModel", "Downloading Elevation Model ({NumFilesDownloaded} of {NumFilesToDownload})"), Arguments));
+			SlowTask.EnterProgressFrame(Progress, FText::Format(LOCTEXT("DownloadingElevationModel", "Downloading Elevation Model ({NumFilesDownloaded} of {NumFilesToDownload})"), Arguments));
 
 			FPlatformProcess::Sleep(0.1f);
+		}
+
+		if (FilesDownloaded.Num() < NumFilesToDownload)
+		{
+			ShowErrorMessage(LOCTEXT("DownloadElevationFailed", "Could not download all necessary elevation model files."));
+			return;
 		}
 
 		/*Landscape->Import(
