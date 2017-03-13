@@ -34,6 +34,8 @@ public:
 	/** Refreshes the details view and regenerates all the customized layouts. */
 	void RefreshDetails();
 
+	/** Handles build landscape button clicking */
+	FReply OnBuildLandscapeClicked();
 
 protected:
 	/** Holds Selected Street Map Component */

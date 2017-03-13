@@ -14,12 +14,6 @@ namespace UnrealBuildTool.Rules
 					"RHI",
 					"RenderCore",
 					"ShaderCore",
-                    "PropertyEditor",
-                    "Landscape",
-                    "HTTP",
-                    "ImageWrapper",
-                    "SlateCore",
-                    "Slate",
                 }
 			);
         }

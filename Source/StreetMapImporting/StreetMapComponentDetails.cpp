@@ -22,6 +22,7 @@
 
 
 #include "StreetMapComponent.h"
+#include "Elevation.h"
 
 
 #define LOCTEXT_NAMESPACE "StreetMapComponentDetails"
@@ -375,5 +376,19 @@ void FStreetMapComponentDetails::RefreshDetails()
 		LastDetailBuilderPtr->ForceRefreshDetails();
 	}
 }
+
+FReply FStreetMapComponentDetails::OnBuildLandscapeClicked()
+{
+	if (SelectedStreetMapComponent != nullptr)
+	{
+		SpawnLandscape(GWorld);
+
+		// regenerates details panel layouts , to take in consideration new changes.
+		RefreshDetails();
+	}
+
+	return FReply::Handled();
+}
+
 
 #undef LOCTEXT_NAMESPACE

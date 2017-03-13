@@ -25,7 +25,17 @@ namespace UnrealBuildTool.Rules
                     "RawMesh",
                     "AssetTools",
                     "AssetRegistry",
-                    "StreetMapRuntime"
+                    "StreetMapRuntime",
+                    "HTTP",
+                    "ImageWrapper",
+                    "DesktopPlatform",
+                    "Landscape",
+                }
+            );
+
+            PrivateIncludePaths.AddRange(
+                new string[] {
+                    "Developer/DesktopPlatform/Public",
                 }
             );
         }
