@@ -39,6 +39,8 @@ static const FString& GetElevationCacheDir()
 	return ElevationCacheDir;
 }
 
+static const int32 ExpectedElevationTileSize = 256;
+
 class FCachedElevationFile
 {
 private:
@@ -52,6 +54,8 @@ private:
 	FDateTime StartTime;
 	FTimespan TimeSpan;
 
+	TArray<float> Elevation;
+
 	TSharedPtr<IHttpRequest> HttpRequest;
 
 	bool UnpackElevation(const TArray<uint8>& RawData)
@@ -62,7 +66,15 @@ private:
 		if (PngImageWrapper.IsValid() && PngImageWrapper->SetCompressed(RawData.GetData(), RawData.Num()))
 		{
 			int32 BitDepth = PngImageWrapper->GetBitDepth();
-			ERGBFormat::Type Format = PngImageWrapper->GetFormat();
+			const ERGBFormat::Type Format = PngImageWrapper->GetFormat();
+			const int32 Width = PngImageWrapper->GetWidth();
+			const int32 Height = PngImageWrapper->GetHeight();
+
+			if (Width != ExpectedElevationTileSize || Height != ExpectedElevationTileSize)
+			{
+				GWarn->Logf(ELogVerbosity::Error, TEXT("PNG file has wrong dimensions. Expected %dx%d"), ExpectedElevationTileSize, ExpectedElevationTileSize);
+				return false;
+			}
 
 			if ((Format != ERGBFormat::RGBA && Format != ERGBFormat::BGRA) || BitDepth > 8)
 			{
@@ -75,12 +87,23 @@ private:
 				BitDepth = 8;
 			}
 
-			PngImageWrapper->GetWidth();
-			PngImageWrapper->GetHeight();
 			const TArray<uint8>* RawPNG = nullptr;
 			if (PngImageWrapper->GetRaw(Format, BitDepth, RawPNG))
 			{
+				const uint8* Data = RawPNG->GetData();
+				Elevation.Reserve(Width * Height);
+				float* ElevationData = Elevation.GetData();
+				const float* ElevationDataEnd = ElevationData + (Width * Height);
 
+				while (ElevationData < ElevationDataEnd)
+				{
+					float ElevationValue = (Data[0] * 256.0f + Data[1] + Data[2] / 256.0f) - 32768.0f;
+
+					*ElevationData = ElevationValue;
+
+					ElevationData++;
+					Data += 4;
+				}				
 			}
 
 			return true;
@@ -145,6 +168,7 @@ public:
 
 		if (TimeSpan.GetSeconds() > 10)
 		{
+			GWarn->Logf(ELogVerbosity::Error, TEXT("Download time-out. Check your internet connection!"));
 			Failed = true;
 			HttpRequest->CancelRequest();
 			return;
@@ -157,6 +181,7 @@ public:
 		if (HttpRequest->GetStatus() == EHttpRequestStatus::Failed ||
 			HttpRequest->GetStatus() == EHttpRequestStatus::Failed_ConnectionError)
 		{
+			GWarn->Logf(ELogVerbosity::Error, TEXT("Download connection failure. Check your internet connection!"));
 			Failed = true;
 			HttpRequest->CancelRequest();
 			return;
@@ -169,6 +194,11 @@ public:
 		}
 
 		HttpRequest->Tick(0);
+	}
+
+	const TArray<float>& GetElevationData()
+	{
+		return Elevation;
 	}
 
 	FCachedElevationFile(uint32 X, uint32 Y, uint32 Z)
@@ -247,9 +277,9 @@ ALandscape* BuildLandscape(UWorld* World, const FStreetMapLandscapeBuildSettings
 
 	if (FilesDownloaded.Num() < NumFilesToDownload)
 	{
-		ShowErrorMessage(LOCTEXT("DownloadElevationFailed", "Could not download all necessary elevation model files."));
+		ShowErrorMessage(LOCTEXT("DownloadElevationFailed", "Could not download all necessary elevation model files. See Log for details!"));
 		World->DestroyActor(Landscape);
-		return NULL;
+		return nullptr;
 	}
 
 	/*Landscape->Import(
