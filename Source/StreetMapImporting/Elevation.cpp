@@ -184,7 +184,7 @@ public:
 	}
 };
 
-ALandscape* SpawnLandscape(UWorld* World)
+ALandscape* BuildLandscape(UWorld* World, const FStreetMapLandscapeBuildSettings& BuildSettings)
 {
 	ALandscape* Landscape = World->SpawnActor<ALandscape>(ALandscape::StaticClass());
 
@@ -248,6 +248,7 @@ ALandscape* SpawnLandscape(UWorld* World)
 	if (FilesDownloaded.Num() < NumFilesToDownload)
 	{
 		ShowErrorMessage(LOCTEXT("DownloadElevationFailed", "Could not download all necessary elevation model files."));
+		World->DestroyActor(Landscape);
 		return NULL;
 	}
 

@@ -112,6 +112,23 @@ public:
 };
 
 
+/** Landscape generation settings */
+USTRUCT(BlueprintType)
+struct STREETMAPRUNTIME_API FStreetMapLandscapeBuildSettings
+{
+	GENERATED_USTRUCT_BODY()
+
+public:
+
+	UPROPERTY(Category = Landscape, EditAnywhere, meta = (UIMin = 1, ClampMin = 256, ClampMax = 8096))
+		int32 Resolution;
+	
+	FStreetMapLandscapeBuildSettings() 
+		: Resolution(512)
+	{
+	}
+
+};
 
 /** Types of roads */
 UENUM( BlueprintType )

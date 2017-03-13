@@ -1,5 +1,6 @@
 #pragma once
 
 #include "Landscape.h"
+#include "StreetMap.h"
 
-ALandscape* SpawnLandscape(UWorld* World);
+ALandscape* BuildLandscape(UWorld* World, const FStreetMapLandscapeBuildSettings& BuildSettings);

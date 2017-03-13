@@ -127,6 +127,7 @@ public:
 	/** Rebuilds the graphics and physics mesh representation if we don't have one right now.  Designed to be called on demand. */
 	void BuildMesh();
 
+	const FStreetMapLandscapeBuildSettings& GetLandscapeSettings() { return LandscapeSettings; }
 
 
 protected:
@@ -158,6 +159,9 @@ protected:
 
 	UPROPERTY(EditAnywhere, Category = "StreetMap")
 		FStreetMapCollisionSettings CollisionSettings;
+
+	UPROPERTY(EditAnywhere, Category = "Landscape")
+		FStreetMapLandscapeBuildSettings LandscapeSettings;
 
 	//** Physics data for mesh collision. */
 	UPROPERTY(Transient)

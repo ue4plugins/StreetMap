@@ -187,6 +187,30 @@ void FStreetMapComponentDetails::CustomizeDetails(IDetailLayoutBuilder& DetailBu
 			];
 	}
 
+	// Landscape settings
+	{
+		IDetailCategoryBuilder& LandscapeCategory = DetailBuilder.EditCategory("Landscape", FText::GetEmpty(), ECategoryPriority::Important);
+		LandscapeCategory.InitiallyCollapsed(false);
+
+		const bool bCanBuildLandscape = HasValidMapObject();
+		LandscapeCategory.AddCustomRow(FText::GetEmpty(), false)
+			[
+				SAssignNew(TempHorizontalBox, SHorizontalBox)
+				+ SHorizontalBox::Slot()
+			[
+				SNew(SButton)
+				.ToolTipText(LOCTEXT("BuildLandscape_Tooltip", "Download elevation model and build a Landscape beneath the OpenStreetMap."))
+			.OnClicked(this, &FStreetMapComponentDetails::OnBuildLandscapeClicked)
+			.IsEnabled(bCanBuildLandscape)
+			.HAlign(HAlign_Center)
+			[
+				SNew(STextBlock)
+				.Text(LOCTEXT("BuildLandscape", "Build Landscape"))
+			.Font(IDetailLayoutBuilder::GetDetailFont())
+			]
+			]
+			];
+	}
 }
 
 bool FStreetMapComponentDetails::HasValidMeshData() const
@@ -381,9 +405,9 @@ FReply FStreetMapComponentDetails::OnBuildLandscapeClicked()
 {
 	if (SelectedStreetMapComponent != nullptr)
 	{
-		SpawnLandscape(GWorld);
+		BuildLandscape(GWorld, SelectedStreetMapComponent->GetLandscapeSettings());
 
-		// regenerates details panel layouts , to take in consideration new changes.
+		// regenerates details panel layouts, to take in consideration new changes.
 		RefreshDetails();
 	}
 
