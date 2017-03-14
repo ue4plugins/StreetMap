@@ -39,6 +39,19 @@ static const FString& GetElevationCacheDir()
 	return ElevationCacheDir;
 }
 
+static FString GetCachedFilePath(uint32 X, uint32 Y, uint32 Z)
+{
+	FString FilePath = GetElevationCacheDir();
+	FilePath.Append("elevation_");
+	FilePath.AppendInt(Z);
+	FilePath.Append("_");
+	FilePath.AppendInt(X);
+	FilePath.Append("_");
+	FilePath.AppendInt(Y);
+	FilePath.Append(".png");
+	return FilePath;
+}
+
 static const int32 ExpectedElevationTileSize = 256;
 
 class FCachedElevationFile
@@ -46,6 +59,7 @@ class FCachedElevationFile
 private:
 	const FString URLTemplate = TEXT("http://s3.amazonaws.com/elevation-tiles-prod/terrarium/%d/%d/%d.png");
 
+	bool WasInitialized;
 	bool WasDownloadASuccess;
 	bool Failed;
 
@@ -124,7 +138,8 @@ private:
 				return;
 			}
 
-			// TODO: write data to cache
+			// write data to cache
+			FFileHelper::SaveArrayToFile(Content, *GetCachedFilePath(X, Y, Z));
 		}
 
 		WasDownloadASuccess = true;
@@ -142,6 +157,25 @@ private:
 		{
 			Failed = true;
 		}
+	}
+
+	void Initialize()
+	{
+		WasInitialized = true;
+
+		// try to load data from cache first
+		{
+			TArray<uint8> RawData;
+			if (FFileHelper::LoadFileToArray(RawData, *GetCachedFilePath(X, Y, Z)))
+			{
+				if (UnpackElevation(RawData))
+				{
+					WasDownloadASuccess = true;
+					return;
+				}
+			}
+		}
+		DownloadFile();
 	}
 
 public:
@@ -164,6 +198,11 @@ public:
 
 	void Tick()
 	{
+		if (!WasInitialized)
+		{
+			Initialize();
+		}
+
 		if (WasDownloadASuccess || Failed) return;
 
 		if (TimeSpan.GetSeconds() > 10)
@@ -202,15 +241,14 @@ public:
 	}
 
 	FCachedElevationFile(uint32 X, uint32 Y, uint32 Z)
-		: WasDownloadASuccess(false)
+		: WasInitialized(false)
+		, WasDownloadASuccess(false)
 		, Failed(false)
 		, X(X)
 		, Y(Y)
 		, Z(Z)
 		, StartTime(FDateTime::UtcNow())
 	{
-		// TODO: try to load data from cache first
-		DownloadFile();
 	}
 };
 
