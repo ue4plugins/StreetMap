@@ -201,7 +201,7 @@ void FStreetMapComponentDetails::CustomizeDetails(IDetailLayoutBuilder& DetailBu
 				SNew(SButton)
 				.ToolTipText(LOCTEXT("BuildLandscape_Tooltip", "Download elevation model and build a Landscape beneath the OpenStreetMap."))
 			.OnClicked(this, &FStreetMapComponentDetails::OnBuildLandscapeClicked)
-			.IsEnabled(bCanBuildLandscape)
+			.IsEnabled(this, &FStreetMapComponentDetails::BuildLandscapeIsEnabled)
 			.HAlign(HAlign_Center)
 			[
 				SNew(STextBlock)
@@ -210,6 +210,9 @@ void FStreetMapComponentDetails::CustomizeDetails(IDetailLayoutBuilder& DetailBu
 			]
 			]
 			];
+
+		TSharedRef<IPropertyHandle> PropertyHandle_Material = DetailBuilder.GetProperty("LandscapeSettings.Material");
+		PropertyHandle_Material->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FStreetMapComponentDetails::RefreshLandscapeLayersList));
 	}
 }
 
@@ -405,13 +408,56 @@ FReply FStreetMapComponentDetails::OnBuildLandscapeClicked()
 {
 	if (SelectedStreetMapComponent != nullptr)
 	{
-		BuildLandscape(GWorld, SelectedStreetMapComponent->GetLandscapeSettings());
+		BuildLandscape(GWorld, SelectedStreetMapComponent->LandscapeSettings);
 
 		// regenerates details panel layouts, to take in consideration new changes.
 		RefreshDetails();
 	}
 
 	return FReply::Handled();
+}
+
+bool FStreetMapComponentDetails::BuildLandscapeIsEnabled() const
+{
+	return SelectedStreetMapComponent && SelectedStreetMapComponent->LandscapeSettings.Material;
+}
+
+void FStreetMapComponentDetails::RefreshLandscapeLayersList()
+{
+	if (!SelectedStreetMapComponent) return;
+
+	UTexture2D* ThumbnailWeightmap = LoadObject<UTexture2D>(NULL, TEXT("/Engine/EditorLandscapeResources/LandscapeThumbnailWeightmap.LandscapeThumbnailWeightmap"), NULL, LOAD_None, NULL);
+	UTexture2D* ThumbnailHeightmap = LoadObject<UTexture2D>(NULL, TEXT("/Engine/EditorLandscapeResources/LandscapeThumbnailHeightmap.LandscapeThumbnailHeightmap"), NULL, LOAD_None, NULL);
+
+	UMaterialInterface* Material = SelectedStreetMapComponent->LandscapeSettings.Material;
+	TArray<FName> LayerNames = ALandscapeProxy::GetLayersFromMaterial(Material);
+
+	const TArray<FLandscapeImportLayerInfo> OldLayersList = MoveTemp(SelectedStreetMapComponent->LandscapeSettings.Layers);
+	SelectedStreetMapComponent->LandscapeSettings.Layers.Reset(LayerNames.Num());
+
+	for (int32 i = 0; i < LayerNames.Num(); i++)
+	{
+		const FName& LayerName = LayerNames[i];
+
+		bool bFound = false;
+		FLandscapeImportLayerInfo NewImportLayer;
+		for (int32 j = 0; j < OldLayersList.Num(); j++)
+		{
+			if (OldLayersList[j].LayerName == LayerName)
+			{
+				NewImportLayer = OldLayersList[j];
+				bFound = true;
+				break;
+			}
+		}
+
+		if (!bFound)
+		{
+			NewImportLayer.LayerName = LayerName;
+		}
+
+		SelectedStreetMapComponent->LandscapeSettings.Layers.Add(MoveTemp(NewImportLayer));
+	}
 }
 
 

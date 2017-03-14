@@ -127,9 +127,6 @@ public:
 	/** Rebuilds the graphics and physics mesh representation if we don't have one right now.  Designed to be called on demand. */
 	void BuildMesh();
 
-	const FStreetMapLandscapeBuildSettings& GetLandscapeSettings() { return LandscapeSettings; }
-
-
 protected:
 
 	/** Giving a default material to the mesh if no valid material is already assigned or materials array is empty. */
@@ -167,6 +164,7 @@ protected:
 	UPROPERTY(Transient)
 		UBodySetup* StreetMapBodySetup;
 
+	friend class FStreetMapComponentDetails;
 
 protected:
 	//

@@ -11,6 +11,7 @@
 #include "Interfaces/IImageWrapperModule.h"
 #include "SNotificationList.h"
 #include "NotificationManager.h"
+#include "ScopedTransaction.h"
 
 #define LOCTEXT_NAMESPACE "StreetMapImporting"
 
@@ -105,7 +106,7 @@ private:
 			if (PngImageWrapper->GetRaw(Format, BitDepth, RawPNG))
 			{
 				const uint8* Data = RawPNG->GetData();
-				Elevation.Reserve(Width * Height);
+				Elevation.SetNumUninitialized(Width * Height);
 				float* ElevationData = Elevation.GetData();
 				const float* ElevationDataEnd = ElevationData + (Width * Height);
 
@@ -252,81 +253,192 @@ public:
 	}
 };
 
+class ElevationModel
+{
+public:
+
+	bool LoadElevationData(const FStreetMapLandscapeBuildSettings& BuildSettings, FScopedSlowTask& SlowTask)
+	{
+		// TODO: download correct data
+
+		TArray<TSharedPtr<FCachedElevationFile>> FilesToDownload;
+		FilesToDownload.Add(MakeShared<FCachedElevationFile>(1, 1, 2));
+		FilesToDownload.Add(MakeShared<FCachedElevationFile>(2, 1, 2));
+		FilesToDownload.Add(MakeShared<FCachedElevationFile>(1, 2, 2));
+		FilesToDownload.Add(MakeShared<FCachedElevationFile>(2, 2, 2));
+
+		const int32 NumFilesToDownload = FilesToDownload.Num();
+		while (FilesToDownload.Num())
+		{
+			FHttpModule::Get().GetHttpManager().Tick(0);
+
+			if (GWarn->ReceivedUserCancel())
+			{
+				break;
+			}
+
+			float Progress = 0.0f;
+			for (auto FileToDownload : FilesToDownload)
+			{
+				FileToDownload->Tick();
+
+				if (FileToDownload->HasFinished())
+				{
+					FilesToDownload.Remove(FileToDownload);
+					Progress = 1.0f / (float)NumFilesToDownload;
+
+					if (FileToDownload->Succeeded())
+					{
+						FilesDownloaded.Add(FileToDownload);
+					}
+					else
+					{
+						// We failed to download one file so cancel the rest because we cannot proceed without it.
+						for (auto FileToCancel : FilesToDownload)
+						{
+							FileToCancel->CancelRequest();
+						}
+						FilesToDownload.Empty();
+					}
+					break;
+				}
+			}
+
+			FFormatNamedArguments Arguments;
+			Arguments.Add(TEXT("NumFilesDownloaded"), FText::AsNumber(FilesDownloaded.Num()));
+			Arguments.Add(TEXT("NumFilesToDownload"), FText::AsNumber(NumFilesToDownload));
+			SlowTask.EnterProgressFrame(Progress, FText::Format(LOCTEXT("DownloadingElevationModel", "Downloading Elevation Model ({NumFilesDownloaded} of {NumFilesToDownload})"), Arguments));
+
+			FPlatformProcess::Sleep(0.1f);
+		}
+
+		if (FilesDownloaded.Num() < NumFilesToDownload)
+		{
+			ShowErrorMessage(LOCTEXT("DownloadElevationFailed", "Could not download all necessary elevation model files. See Log for details!"));
+			return false;
+		}
+
+		return true;
+	}
+
+	void ReprojectData(const FStreetMapLandscapeBuildSettings& BuildSettings, FScopedSlowTask& SlowTask, TArray<uint16>& OutElevationData)
+	{
+		SlowTask.EnterProgressFrame(0.0f, LOCTEXT("ReprojectingElevationModel", "Reprojecting Elevation Model"));
+
+		const int32 SizeX = BuildSettings.RadiusInMeters;
+		const int32 SizeY = BuildSettings.RadiusInMeters;
+
+		OutElevationData.SetNumUninitialized(SizeX * SizeY);
+
+		uint16* Elevation = OutElevationData.GetData();
+		for (int32 i = 0; i < SizeX * SizeY; i++)
+		{
+			// 32768 = 0.0f
+			Elevation[i] = 32768;
+		}
+	}
+
+private:
+	TArray<TSharedPtr<FCachedElevationFile>> FilesDownloaded;
+};
+
+
+ALandscape* CreateLandscape(UWorld* World, const FStreetMapLandscapeBuildSettings& BuildSettings, const TArray<uint16>& ElevationData, FScopedSlowTask& SlowTask)
+{
+	SlowTask.EnterProgressFrame(0.0f, LOCTEXT("CreatingLandscape", "Filling Landscape with data"));
+
+	FScopedTransaction Transaction(LOCTEXT("Undo", "Creating New Landscape"));
+	ALandscape* Landscape = World->SpawnActor<ALandscape>();
+
+	const int32 SizeX = BuildSettings.RadiusInMeters;
+	const int32 SizeY = BuildSettings.RadiusInMeters;
+
+	// create import layers
+	TArray<FLandscapeImportLayerInfo> ImportLayers;
+	{
+		const auto& ImportLandscapeLayersList = BuildSettings.Layers;
+		ImportLayers.Reserve(ImportLandscapeLayersList.Num());
+
+		// Fill in LayerInfos array and allocate data
+		for (const FLandscapeImportLayerInfo& UIImportLayer : ImportLandscapeLayersList)
+		{
+			FLandscapeImportLayerInfo ImportLayer = FLandscapeImportLayerInfo(UIImportLayer.LayerName);
+			ImportLayer.LayerInfo = UIImportLayer.LayerInfo;
+			ImportLayer.SourceFilePath = "";
+			ImportLayer.LayerData = TArray<uint8>();
+			ImportLayers.Add(MoveTemp(ImportLayer));
+		}
+
+		// @todo: fill the blend weights based on land use
+		// for now Fill the first weight-blended layer to 100%
+		{
+			ImportLayers[0].LayerData.SetNumUninitialized(SizeX * SizeY);
+
+			uint8* ByteData = ImportLayers[0].LayerData.GetData();
+			for (int32 i = 0; i < SizeX * SizeY; i++)
+			{
+				ByteData[i] = 255;
+			}
+		}
+	}
+
+	Landscape->LandscapeMaterial = BuildSettings.Material;
+	Landscape->Import(FGuid::NewGuid(), 0, 0, SizeX - 1, SizeY - 1,
+		1, 31, ElevationData.GetData(), nullptr,
+		ImportLayers, ELandscapeImportAlphamapType::Additive);
+
+	// automatically calculate a lighting LOD that won't crash lightmass (hopefully)
+	// < 2048x2048 -> LOD0
+	// >=2048x2048 -> LOD1
+	// >= 4096x4096 -> LOD2
+	// >= 8192x8192 -> LOD3
+	/*Landscape->StaticLightingLOD = FMath::DivideAndRoundUp(FMath::CeilLogTwo((SizeX * SizeY) / (2048 * 2048) + 1), (uint32)2);
+
+	ULandscapeInfo* LandscapeInfo = Landscape->CreateLandscapeInfo();
+	LandscapeInfo->UpdateLayerInfoMap(Landscape);
+
+	// Import doesn't fill in the LayerInfo for layers with no data, do that now
+	const TArray<FLandscapeImportLayer>& ImportLandscapeLayersList = LandscapeEdMode->UISettings->ImportLandscape_Layers;
+	for (int32 i = 0; i < ImportLandscapeLayersList.Num(); i++)
+	{
+		if (ImportLandscapeLayersList[i].LayerInfo != nullptr)
+		{
+			if (LandscapeEdMode->NewLandscapePreviewMode == ENewLandscapePreviewMode::ImportLandscape)
+			{
+				Landscape->EditorLayerSettings.Add(FLandscapeEditorLayerSettings(ImportLandscapeLayersList[i].LayerInfo, ImportLandscapeLayersList[i].SourceFilePath));
+			}
+			else
+			{
+				Landscape->EditorLayerSettings.Add(FLandscapeEditorLayerSettings(ImportLandscapeLayersList[i].LayerInfo));
+			}
+
+			int32 LayerInfoIndex = LandscapeInfo->GetLayerInfoIndex(ImportLandscapeLayersList[i].LayerName);
+			if (ensure(LayerInfoIndex != INDEX_NONE))
+			{
+				FLandscapeInfoLayerSettings& LayerSettings = LandscapeInfo->Layers[LayerInfoIndex];
+				LayerSettings.LayerInfoObj = ImportLandscapeLayersList[i].LayerInfo;
+			}
+		}
+	}*/
+
+	return Landscape;
+}
+
+
 ALandscape* BuildLandscape(UWorld* World, const FStreetMapLandscapeBuildSettings& BuildSettings)
 {
-	ALandscape* Landscape = World->SpawnActor<ALandscape>(ALandscape::StaticClass());
-
 	FScopedSlowTask SlowTask(2.0f, LOCTEXT("GeneratingLandscape", "Generating Landscape"));
 	SlowTask.MakeDialog(true);
 
-	// TODO: download correct data
+	ElevationModel ElevationModelInstance;
 
-	TArray<TSharedPtr<FCachedElevationFile>> FilesToDownload;
-	FilesToDownload.Add(MakeShared<FCachedElevationFile>(1, 1, 2));
-	FilesToDownload.Add(MakeShared<FCachedElevationFile>(2, 1, 2));
-	FilesToDownload.Add(MakeShared<FCachedElevationFile>(1, 2, 2));
-	FilesToDownload.Add(MakeShared<FCachedElevationFile>(2, 2, 2));
-
-	TArray<TSharedPtr<FCachedElevationFile>> FilesDownloaded;
-	const int32 NumFilesToDownload = FilesToDownload.Num();
-	while (FilesToDownload.Num())
+	if (!ElevationModelInstance.LoadElevationData(BuildSettings, SlowTask))
 	{
-		FHttpModule::Get().GetHttpManager().Tick(0);
-
-		if (GWarn->ReceivedUserCancel())
-		{
-			break;
-		}
-
-		float Progress = 0.0f;
-		for (auto FileToDownload : FilesToDownload)
-		{
-			FileToDownload->Tick();
-
-			if (FileToDownload->HasFinished())
-			{
-				FilesToDownload.Remove(FileToDownload);
-				Progress = 1.0f / (float)NumFilesToDownload;
-
-				if (FileToDownload->Succeeded())
-				{
-					FilesDownloaded.Add(FileToDownload);
-				}
-				else
-				{
-					// We failed to download one file so cancel the rest because we cannot proceed without it.
-					for (auto FileToCancel : FilesToDownload)
-					{
-						FileToCancel->CancelRequest();
-					}
-					FilesToDownload.Empty();
-				}
-				break;
-			}
-		}
-
-		FFormatNamedArguments Arguments;
-		Arguments.Add(TEXT("NumFilesDownloaded"), FText::AsNumber(FilesDownloaded.Num()));
-		Arguments.Add(TEXT("NumFilesToDownload"), FText::AsNumber(NumFilesToDownload));
-		SlowTask.EnterProgressFrame(Progress, FText::Format(LOCTEXT("DownloadingElevationModel", "Downloading Elevation Model ({NumFilesDownloaded} of {NumFilesToDownload})"), Arguments));
-
-		FPlatformProcess::Sleep(0.1f);
-	}
-
-	if (FilesDownloaded.Num() < NumFilesToDownload)
-	{
-		ShowErrorMessage(LOCTEXT("DownloadElevationFailed", "Could not download all necessary elevation model files. See Log for details!"));
-		World->DestroyActor(Landscape);
 		return nullptr;
 	}
 
-	/*Landscape->Import(
-	const FGuid Guid,
-	const int32 MinX, const int32 MinY, const int32 MaxX, const int32 MaxY,
-	const int32 InNumSubsections, const int32 InSubsectionSizeQuads,
-	const uint16* const HeightData, const TCHAR* const HeightmapFileName,
-	const TArray<FLandscapeImportLayerInfo>& ImportLayerInfos, const ELandscapeImportAlphamapType ImportLayerType);
-	*/
+	TArray<uint16> ElevationData;
+	ElevationModelInstance.ReprojectData(BuildSettings, SlowTask, ElevationData);
 
-	return Landscape;
+	return CreateLandscape(World, BuildSettings, ElevationData, SlowTask);
 }

@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include "LandscapeProxy.h"
 #include "StreetMap.generated.h"
 
 
@@ -120,14 +121,22 @@ struct STREETMAPRUNTIME_API FStreetMapLandscapeBuildSettings
 
 public:
 
-	UPROPERTY(Category = Landscape, EditAnywhere, meta = (UIMin = 1, ClampMin = 256, ClampMax = 8096))
-		int32 Resolution;
+	UPROPERTY(Category = "Landscape", EditAnywhere, meta = (UIMin = 1, ClampMin = 256, ClampMax = 8192))
+		int32 RadiusInMeters;
+
+	// Material initially applied to the landscape. Setting a material here exposes properties for setting up layer info based on the landscape blend nodes in the material.
+	UPROPERTY(Category = "Landscape", EditAnywhere, meta = (DisplayName = "Material", ShowForTools = "Landscape"))
+		UMaterialInterface* Material;
+
+	// The landscape layers that will be created. Only layer names referenced in the material assigned above are shown here. Modify the material to add more layers.
+	UPROPERTY(Category = "Landscape", EditAnywhere, EditFixedSize, meta = (DisplayName = "Layers", ShowForTools = "Landscape"))
+		TArray<FLandscapeImportLayerInfo> Layers;
 	
 	FStreetMapLandscapeBuildSettings() 
-		: Resolution(512)
+		: RadiusInMeters(512)
+		, Material(nullptr)
 	{
 	}
-
 };
 
 /** Types of roads */
