@@ -419,15 +419,25 @@ FReply FStreetMapComponentDetails::OnBuildLandscapeClicked()
 
 bool FStreetMapComponentDetails::BuildLandscapeIsEnabled() const
 {
-	return SelectedStreetMapComponent && SelectedStreetMapComponent->LandscapeSettings.Material;
+	if (!SelectedStreetMapComponent || !SelectedStreetMapComponent->LandscapeSettings.Material)
+	{
+		return false;
+	}
+
+	for (int32 i = 0; i < SelectedStreetMapComponent->LandscapeSettings.Layers.Num(); ++i)
+	{
+		if (!SelectedStreetMapComponent->LandscapeSettings.Layers[i].LayerInfo)
+		{
+			return false;
+		}
+	}
+
+	return true;
 }
 
 void FStreetMapComponentDetails::RefreshLandscapeLayersList()
 {
 	if (!SelectedStreetMapComponent) return;
-
-	UTexture2D* ThumbnailWeightmap = LoadObject<UTexture2D>(NULL, TEXT("/Engine/EditorLandscapeResources/LandscapeThumbnailWeightmap.LandscapeThumbnailWeightmap"), NULL, LOAD_None, NULL);
-	UTexture2D* ThumbnailHeightmap = LoadObject<UTexture2D>(NULL, TEXT("/Engine/EditorLandscapeResources/LandscapeThumbnailHeightmap.LandscapeThumbnailHeightmap"), NULL, LOAD_None, NULL);
 
 	UMaterialInterface* Material = SelectedStreetMapComponent->LandscapeSettings.Material;
 	TArray<FName> LayerNames = ALandscapeProxy::GetLayersFromMaterial(Material);

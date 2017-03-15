@@ -129,7 +129,7 @@ public:
 		UMaterialInterface* Material;
 
 	// The landscape layers that will be created. Only layer names referenced in the material assigned above are shown here. Modify the material to add more layers.
-	UPROPERTY(Category = "Landscape", EditAnywhere, EditFixedSize, meta = (DisplayName = "Layers", ShowForTools = "Landscape"))
+	UPROPERTY(Category = "Landscape", EditAnywhere, NonTransactional, EditFixedSize, meta = (DisplayName = "Layers", ShowForTools = "Landscape"))
 		TArray<FLandscapeImportLayerInfo> Layers;
 	
 	FStreetMapLandscapeBuildSettings() 
