@@ -4,12 +4,7 @@
 #include "StreetMapFactory.h"
 #include "OSMFile.h"
 #include "StreetMap.h"
-
-
-// Latitude/longitude scale factor
-//			- https://en.wikipedia.org/wiki/Equator#Exact_length
-static const double EarthCircumference = 40075036.0;
-const double UStreetMapFactory::LatitudeLongitudeScale = EarthCircumference / 360.0; // meters per degree
+#include "GISUtils/SpatialReferenceSystem.h"
 
 
 UStreetMapFactory::UStreetMapFactory(const FObjectInitializer& ObjectInitializer)
@@ -56,34 +51,8 @@ bool UStreetMapFactory::LoadFromOpenStreetMapXMLFile( UStreetMap* StreetMap, FSt
 	// @todo: We should make this scale factor customizable as an import option
 	const float OSMToCentimetersScaleFactor = 100.0f;
 
-
-	// Converts latitude to meters
-	auto ConvertLatitudeToMeters = []( const double Latitude ) -> double
-	{
-		return -Latitude * LatitudeLongitudeScale;
-	};
-
-	// Converts longitude to meters
-	auto ConvertLongitudeToMeters = []( const double Longitude, const double Latitude ) -> double
-	{
-		return Longitude * LatitudeLongitudeScale * FMath::Cos( FMath::DegreesToRadians( Latitude ) );
-	};
-
-	// Converts latitude and longitude to X/Y coordinates, relative to some other latitude/longitude
-	auto ConvertLatLongToMetersRelative = [ConvertLatitudeToMeters, ConvertLongitudeToMeters]( 
-		const double Latitude, 
-		const double Longitude, 
-		const double RelativeToLatitude, 
-		const double RelativeToLongitude ) -> FVector2D
-	{
-		// Applies Sanson-Flamsteed (sinusoidal) Projection (see http://www.progonos.com/furuti/MapProj/Normal/CartHow/HowSanson/howSanson.html)
-		return FVector2D(
-			(float)( ConvertLongitudeToMeters( Longitude, Latitude ) - ConvertLongitudeToMeters( RelativeToLongitude, Latitude ) ),
-			(float)( ConvertLatitudeToMeters( Latitude ) - ConvertLatitudeToMeters( RelativeToLatitude ) ) );
-	};
-
 	// Adds a road to the street map using the OpenStreetMap data, flattening the road's coordinates into our map's space
-	auto AddRoadForWay = [ConvertLatLongToMetersRelative, OSMToCentimetersScaleFactor]( 
+	auto AddRoadForWay = [OSMToCentimetersScaleFactor](
 		const FOSMFile& OSMFile, 
 		UStreetMap& StreetMapRef, 
 		const FOSMFile::FOSMWayInfo& OSMWay, 
@@ -143,16 +112,7 @@ bool UStreetMapFactory::LoadFromOpenStreetMapXMLFile( UStreetMap* StreetMap, FSt
 				for( const FOSMFile::FOSMNodeInfo* OSMNodePtr : OSMWay.Nodes )
 				{
 					const FOSMFile::FOSMNodeInfo& OSMNode = *OSMNodePtr;
-
-					// Transform all points relative to the center of the latitude/longitude bounds, so that
-					// we get as much precision as possible.
-					const double RelativeToLatitude = OSMFile.AverageLatitude;
-					const double RelativeToLongitude = OSMFile.AverageLongitude;
-					const FVector2D NodePos = ConvertLatLongToMetersRelative(
-						OSMNode.Latitude,
-						OSMNode.Longitude,
-						RelativeToLatitude,
-						RelativeToLongitude ) * OSMToCentimetersScaleFactor;
+					const FVector2D NodePos = OSMFile.SpatialReferenceSystem.FromEPSG4326(OSMNode.Longitude, OSMNode.Latitude) * OSMToCentimetersScaleFactor;
 
 					// Update bounding box
 					{
@@ -209,7 +169,7 @@ bool UStreetMapFactory::LoadFromOpenStreetMapXMLFile( UStreetMap* StreetMap, FSt
 
 
 	// Adds a building to the street map using the OpenStreetMap data, flattening the road's coordinates into our map's space
-	auto AddBuildingForWay = [ConvertLatLongToMetersRelative, OSMToCentimetersScaleFactor]( 
+	auto AddBuildingForWay = [OSMToCentimetersScaleFactor]( 
 		const FOSMFile& OSMFile, 
 		UStreetMap& StreetMapRef, 
 		const FOSMFile::FOSMWayInfo& OSMWay ) -> bool
@@ -231,16 +191,7 @@ bool UStreetMapFactory::LoadFromOpenStreetMapXMLFile( UStreetMap* StreetMap, FSt
 				for( const FOSMFile::FOSMNodeInfo* OSMNodePtr : OSMWay.Nodes )
 				{
 					const FOSMFile::FOSMNodeInfo& OSMNode = *OSMNodePtr;
-
-					// Transform all points relative to the center of the latitude/longitude bounds, so that
-					// we get as much precision as possible.
-					const double RelativeToLatitude = OSMFile.AverageLatitude;
-					const double RelativeToLongitude = OSMFile.AverageLongitude;
-					const FVector2D NodePos = ConvertLatLongToMetersRelative(
-						OSMNode.Latitude,
-						OSMNode.Longitude,
-						RelativeToLatitude,
-						RelativeToLongitude ) * OSMToCentimetersScaleFactor;
+					const FVector2D NodePos = OSMFile.SpatialReferenceSystem.FromEPSG4326(OSMNode.Longitude, OSMNode.Latitude) * OSMToCentimetersScaleFactor;
 
 					// Update bounding box
 					{

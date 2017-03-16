@@ -64,12 +64,8 @@ private:
 	bool WasDownloadASuccess;
 	bool Failed;
 
-	uint32 X, Y, Z;
-
 	FDateTime StartTime;
 	FTimespan TimeSpan;
-
-	TArray<float> Elevation;
 
 	TSharedPtr<IHttpRequest> HttpRequest;
 
@@ -179,6 +175,12 @@ private:
 		DownloadFile();
 	}
 
+protected:
+	TArray<float> Elevation;
+	uint32 X, Y, Z;
+
+	friend class ElevationModel;
+
 public:
 
 	bool HasFinished() const
@@ -236,24 +238,19 @@ public:
 		HttpRequest->Tick(0);
 	}
 
-	const TArray<float>& GetElevationData()
-	{
-		return Elevation;
-	}
-
 	FCachedElevationFile(uint32 X, uint32 Y, uint32 Z)
 		: WasInitialized(false)
 		, WasDownloadASuccess(false)
 		, Failed(false)
+		, StartTime(FDateTime::UtcNow())
 		, X(X)
 		, Y(Y)
 		, Z(Z)
-		, StartTime(FDateTime::UtcNow())
 	{
 	}
 };
 
-class ElevationModel
+class FElevationModel
 {
 public:
 
@@ -330,11 +327,17 @@ public:
 
 		OutElevationData.SetNumUninitialized(SizeX * SizeY);
 
+		const uint16 ZeroElevationOffset = 32768;
+
+		// sample elevation value for each height map vertex
 		uint16* Elevation = OutElevationData.GetData();
-		for (int32 i = 0; i < SizeX * SizeY; i++)
+		for (int32 y = 0; y < SizeY; y++)
 		{
-			// 32768 = 0.0f
-			Elevation[i] = 32768;
+			for (int32 x = 0; x < SizeX; x++)
+			{
+				*Elevation = ZeroElevationOffset;
+				Elevation++;
+			}
 		}
 	}
 
@@ -430,15 +433,15 @@ ALandscape* BuildLandscape(UWorld* World, const FStreetMapLandscapeBuildSettings
 	FScopedSlowTask SlowTask(2.0f, LOCTEXT("GeneratingLandscape", "Generating Landscape"));
 	SlowTask.MakeDialog(true);
 
-	ElevationModel ElevationModelInstance;
+	FElevationModel ElevationModel;
 
-	if (!ElevationModelInstance.LoadElevationData(BuildSettings, SlowTask))
+	if (!ElevationModel.LoadElevationData(BuildSettings, SlowTask))
 	{
 		return nullptr;
 	}
 
 	TArray<uint16> ElevationData;
-	ElevationModelInstance.ReprojectData(BuildSettings, SlowTask, ElevationData);
+	ElevationModel.ReprojectData(BuildSettings, SlowTask, ElevationData);
 
 	return CreateLandscape(World, BuildSettings, ElevationData, SlowTask);
 }

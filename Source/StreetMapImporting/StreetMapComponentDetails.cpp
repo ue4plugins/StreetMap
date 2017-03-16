@@ -22,7 +22,7 @@
 
 
 #include "StreetMapComponent.h"
-#include "Elevation.h"
+#include "GISUtils/Elevation.h"
 
 
 #define LOCTEXT_NAMESPACE "StreetMapComponentDetails"

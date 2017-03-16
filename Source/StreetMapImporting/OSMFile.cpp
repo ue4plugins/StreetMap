@@ -6,6 +6,7 @@
 
 FOSMFile::FOSMFile()
 	: ParsingState( ParsingState::Root )
+	, SpatialReferenceSystem( 0, 0 )
 {
 }
 		
@@ -51,6 +52,8 @@ bool FOSMFile::LoadOpenStreetMapFile( FString& OSMFilePath, const bool bIsFilePa
 		{
 			AverageLatitude /= NodeMap.Num();
 			AverageLongitude /= NodeMap.Num();
+
+			SpatialReferenceSystem = FSpatialReferenceSystem(AverageLongitude, AverageLatitude);
 		}
 
 		return true;
