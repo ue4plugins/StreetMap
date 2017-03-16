@@ -3,4 +3,4 @@
 #include "Landscape.h"
 #include "StreetMap.h"
 
-ALandscape* BuildLandscape(UWorld* World, const FStreetMapLandscapeBuildSettings& BuildSettings);
+ALandscape* BuildLandscape(UStreetMapComponent* StreetMapComponent, UWorld* World, const FStreetMapLandscapeBuildSettings& BuildSettings);

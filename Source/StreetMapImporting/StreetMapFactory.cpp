@@ -268,6 +268,9 @@ bool UStreetMapFactory::LoadFromOpenStreetMapXMLFile( UStreetMap* StreetMap, FSt
 		return false;
 	}
 
+	StreetMap->OriginLongitude = OSMFile.SpatialReferenceSystem.GetOriginLongitude();
+	StreetMap->OriginLatitude = OSMFile.SpatialReferenceSystem.GetOriginLatitude();
+
 	// @todo: The loaded OSMFile stores data in double precision, but our runtime representation (UStreetMap)
 	//        truncates everything to single precision, after transposing coordinates to be relative to the
 	//        center of the map's 2D bounds.  Large maps will suffer from floating point precision issues.

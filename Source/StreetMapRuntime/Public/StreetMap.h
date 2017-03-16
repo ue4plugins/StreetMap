@@ -379,6 +379,14 @@ public:
 		return BoundsMax;
 	}
 
+	double GetOriginLongitude() const
+	{
+		return OriginLongitude;
+	}
+	double GetOriginLatitude() const
+	{
+		return OriginLatitude;
+	}
 
 protected:
 	
@@ -401,6 +409,13 @@ protected:
 	/** 2D bounds (max) of this map's roads and buildings */
 	UPROPERTY( Category=StreetMap, VisibleAnywhere)
 	FVector2D BoundsMax;
+
+	/** Longitude Origin of the SpatialReferenceSystem */
+	UPROPERTY(Category = StreetMap, VisibleAnywhere)
+	double OriginLongitude;
+	/** Latitude Origin of the SpatialReferenceSystem */
+	UPROPERTY(Category = StreetMap, VisibleAnywhere)
+	double OriginLatitude;
 
 #if WITH_EDITORONLY_DATA
 	/** Importing data and options used for this mesh */

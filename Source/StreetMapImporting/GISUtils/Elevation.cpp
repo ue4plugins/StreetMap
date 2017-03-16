@@ -1,6 +1,7 @@
 // Copyright 2017 Richard Schubert. All Rights Reserved.
 
 #include "StreetMapImporting.h"
+#include "StreetMapComponent.h"
 #include "Elevation.h"
 
 #include "DesktopPlatformModule.h"
@@ -12,6 +13,7 @@
 #include "SNotificationList.h"
 #include "NotificationManager.h"
 #include "ScopedTransaction.h"
+#include "SpatialReferenceSystem.h"
 
 #define LOCTEXT_NAMESPACE "StreetMapImporting"
 
@@ -318,9 +320,12 @@ public:
 		return true;
 	}
 
-	void ReprojectData(const FStreetMapLandscapeBuildSettings& BuildSettings, FScopedSlowTask& SlowTask, TArray<uint16>& OutElevationData)
+	void ReprojectData(UStreetMapComponent* StreetMapComponent, const FStreetMapLandscapeBuildSettings& BuildSettings, FScopedSlowTask& SlowTask, TArray<uint16>& OutElevationData)
 	{
 		SlowTask.EnterProgressFrame(0.0f, LOCTEXT("ReprojectingElevationModel", "Reprojecting Elevation Model"));
+
+		UStreetMap* StreetMap = StreetMapComponent->GetStreetMap();
+
 
 		const int32 SizeX = BuildSettings.RadiusInMeters;
 		const int32 SizeY = BuildSettings.RadiusInMeters;
@@ -328,6 +333,9 @@ public:
 		OutElevationData.SetNumUninitialized(SizeX * SizeY);
 
 		const uint16 ZeroElevationOffset = 32768;
+
+		const FSpatialReferenceSystem SRS(StreetMap->GetOriginLongitude(), StreetMap->GetOriginLatitude());
+
 
 		// sample elevation value for each height map vertex
 		uint16* Elevation = OutElevationData.GetData();
@@ -337,6 +345,12 @@ public:
 			{
 				*Elevation = ZeroElevationOffset;
 				Elevation++;
+
+				double Longitude, Latitude;
+				FVector2D VertexLocation(x, y);
+				SRS.ToEPSG3857(VertexLocation, Longitude, Latitude);
+
+
 			}
 		}
 	}
@@ -395,25 +409,18 @@ ALandscape* CreateLandscape(UWorld* World, const FStreetMapLandscapeBuildSetting
 	// >=2048x2048 -> LOD1
 	// >= 4096x4096 -> LOD2
 	// >= 8192x8192 -> LOD3
-	/*Landscape->StaticLightingLOD = FMath::DivideAndRoundUp(FMath::CeilLogTwo((SizeX * SizeY) / (2048 * 2048) + 1), (uint32)2);
+	Landscape->StaticLightingLOD = FMath::DivideAndRoundUp(FMath::CeilLogTwo((SizeX * SizeY) / (2048 * 2048) + 1), (uint32)2);
 
-	ULandscapeInfo* LandscapeInfo = Landscape->CreateLandscapeInfo();
+	/*ULandscapeInfo* LandscapeInfo = Landscape->CreateLandscapeInfo();
 	LandscapeInfo->UpdateLayerInfoMap(Landscape);
 
 	// Import doesn't fill in the LayerInfo for layers with no data, do that now
-	const TArray<FLandscapeImportLayer>& ImportLandscapeLayersList = LandscapeEdMode->UISettings->ImportLandscape_Layers;
+	const TArray<FLandscapeImportLayerInfo>& ImportLandscapeLayersList = BuildSettings.Layers;
 	for (int32 i = 0; i < ImportLandscapeLayersList.Num(); i++)
 	{
 		if (ImportLandscapeLayersList[i].LayerInfo != nullptr)
 		{
-			if (LandscapeEdMode->NewLandscapePreviewMode == ENewLandscapePreviewMode::ImportLandscape)
-			{
-				Landscape->EditorLayerSettings.Add(FLandscapeEditorLayerSettings(ImportLandscapeLayersList[i].LayerInfo, ImportLandscapeLayersList[i].SourceFilePath));
-			}
-			else
-			{
-				Landscape->EditorLayerSettings.Add(FLandscapeEditorLayerSettings(ImportLandscapeLayersList[i].LayerInfo));
-			}
+			Landscape->EditorLayerSettings.Add(FLandscapeEditorLayerSettings(ImportLandscapeLayersList[i].LayerInfo));
 
 			int32 LayerInfoIndex = LandscapeInfo->GetLayerInfoIndex(ImportLandscapeLayersList[i].LayerName);
 			if (ensure(LayerInfoIndex != INDEX_NONE))
@@ -428,7 +435,7 @@ ALandscape* CreateLandscape(UWorld* World, const FStreetMapLandscapeBuildSetting
 }
 
 
-ALandscape* BuildLandscape(UWorld* World, const FStreetMapLandscapeBuildSettings& BuildSettings)
+ALandscape* BuildLandscape(UStreetMapComponent* StreetMapComponent, UWorld* World, const FStreetMapLandscapeBuildSettings& BuildSettings)
 {
 	FScopedSlowTask SlowTask(2.0f, LOCTEXT("GeneratingLandscape", "Generating Landscape"));
 	SlowTask.MakeDialog(true);
@@ -441,7 +448,7 @@ ALandscape* BuildLandscape(UWorld* World, const FStreetMapLandscapeBuildSettings
 	}
 
 	TArray<uint16> ElevationData;
-	ElevationModel.ReprojectData(BuildSettings, SlowTask, ElevationData);
+	ElevationModel.ReprojectData(StreetMapComponent, BuildSettings, SlowTask, ElevationData);
 
 	return CreateLandscape(World, BuildSettings, ElevationData, SlowTask);
 }
