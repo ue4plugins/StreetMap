@@ -349,6 +349,20 @@ bool FOSMFile::ProcessAttribute( const TCHAR* AttributeName, const TCHAR* Attrib
 					// @todo: Add support for interpreting unit strings and converting the values
 				}
 			}
+			else if (!FCString::Stricmp(CurrentWayTagKey, TEXT("building:levels")))
+			{
+				// Check for definition of building level count
+				// This value should contain no spaces? But just leave it in to be sure.
+				if (!FString(AttributeValue).Contains(TEXT(" ")))
+				{
+					CurrentWayInfo->BuildingLevels = FPlatformString::Atoi(AttributeValue);
+				}
+				else
+				{
+					// Looks like the building:levels value contains units of some sort.
+					// @todo: Add support for interpreting unit strings and converting the values
+				}
+			}
 			else if( !FCString::Stricmp( CurrentWayTagKey, TEXT( "oneway" ) ) )
 			{
 				if( !FCString::Stricmp( AttributeValue, TEXT( "yes" ) ) )
