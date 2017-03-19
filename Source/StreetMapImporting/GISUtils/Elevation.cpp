@@ -14,6 +14,7 @@
 #include "NotificationManager.h"
 #include "ScopedTransaction.h"
 #include "SpatialReferenceSystem.h"
+#include "TiledMap.h"
 
 #define LOCTEXT_NAMESPACE "StreetMapImporting"
 
@@ -343,14 +344,17 @@ public:
 		{
 			for (int32 x = 0; x < SizeX; x++)
 			{
-				*Elevation = ZeroElevationOffset;
-				Elevation++;
+				int ElevationOffset = 0;
 
-				double Longitude, Latitude;
+				double WebMercatorX, WebMercatorY;
 				FVector2D VertexLocation(x, y);
-				SRS.ToEPSG3857(VertexLocation, Longitude, Latitude);
+				if (SRS.ToEPSG3857(VertexLocation, WebMercatorX, WebMercatorY))
+				{
+					// TODO: sample elevation at coordinates WebMercatorX/WebMercatorY
+				}
 
-
+				*Elevation = (uint16)(ZeroElevationOffset + ElevationOffset);
+				Elevation++;
 			}
 		}
 	}

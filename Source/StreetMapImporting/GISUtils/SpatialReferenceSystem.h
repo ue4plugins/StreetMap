@@ -26,8 +26,9 @@ public:
 
 	/** Convertes local coordinates (meters) into Web Mercator (pseudo meters).
 	 * (see http://spatialreference.org/ref/sr-org/7483/) 
+	 * Returns whether this operation was successful
 	 */
-	void ToEPSG3857(const FVector2D& Location, double& OutX, double& OutY) const;
+	bool ToEPSG3857(const FVector2D& Location, double& OutX, double& OutY) const;
 
 	inline double GetOriginLongitude() const { return OriginLongitude; }
 	inline double GetOriginLatitude() const { return OriginLatitude; }

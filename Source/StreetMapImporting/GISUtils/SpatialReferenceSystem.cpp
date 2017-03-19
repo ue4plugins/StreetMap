@@ -5,6 +5,7 @@
 // Latitude/longitude scale factor
 //			- https://en.wikipedia.org/wiki/Equator#Exact_length
 static const double EarthCircumference = 40075036.0;
+static const double EarthRadius = 6378137.0;
 static const double LatitudeLongitudeScale = EarthCircumference / 360.0; // meters per degree
 static const double InvLatitudeLongitudeScale = 1.0 / LatitudeLongitudeScale; // degrees per meter
 
@@ -46,10 +47,18 @@ void FSpatialReferenceSystem::ToEPSG4326(const FVector2D& Location, double& OutL
 	}
 };
 
-void FSpatialReferenceSystem::ToEPSG3857(const FVector2D& Location, double& OutX, double& OutY) const
+bool FSpatialReferenceSystem::ToEPSG3857(const FVector2D& Location, double& OutX, double& OutY) const
 {
-	// convert to EPSG4326 first
+	// convert to lon/lat first
 	ToEPSG4326(Location, OutX, OutY);
 
-	// TODO: implement rest
+	if (OutY < -85.05112878 || OutY > 85.05112878)
+	{
+		return false;
+	}
+
+	OutX = FMath::DegreesToRadians(OutX) * EarthRadius;
+	OutY = log(tan(FMath::DegreesToRadians(OutY) * 0.5 + PI * 0.25)) * EarthRadius;
+
+	return true;
 };
