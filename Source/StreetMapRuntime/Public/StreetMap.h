@@ -48,7 +48,13 @@ public:
 
 	/** if true buildings mesh will be 3D instead of flat representation. */
 	UPROPERTY(Category = StreetMap, EditAnywhere, DisplayName = "Create 3D Buildings")
-	uint32 bWant3DBuildings : 1;
+		uint32 bWant3DBuildings : 1;
+
+	/** building level floor conversion factor in centimeters
+		@todo: harmonize with OSMToCentimetersScaleFactor refactoring
+	*/
+	UPROPERTY(Category = StreetMap, EditAnywhere, DisplayName = "Building Level Floor Factor")
+		float BuildingLevelFloorFactor = 300.0f;
 
 	/**
 	* If true, buildings mesh will receive light information.
@@ -280,6 +286,10 @@ struct STREETMAPRUNTIME_API FStreetMapBuilding
 	/** Height of the building in meters (if known, otherwise zero) */
 	UPROPERTY( Category=StreetMap, EditAnywhere )
 	float Height;
+
+	/** Levels of the building (if known, otherwise zero) */
+	UPROPERTY(Category = StreetMap, EditAnywhere)
+	int BuildingLevels;
 
 	// @todo: Performance: Bounding information could be computed at load time if we want to avoid the memory cost of storing it
 

@@ -349,6 +349,10 @@ bool FOSMFile::ProcessAttribute( const TCHAR* AttributeName, const TCHAR* Attrib
 					// @todo: Add support for interpreting unit strings and converting the values
 				}
 			}
+			else if (!FCString::Stricmp(CurrentWayTagKey, TEXT("building:levels")))
+			{
+				CurrentWayInfo->BuildingLevels = FPlatformString::Atoi(AttributeValue);
+			}
 			else if( !FCString::Stricmp( CurrentWayTagKey, TEXT( "oneway" ) ) )
 			{
 				if( !FCString::Stricmp( AttributeValue, TEXT( "yes" ) ) )

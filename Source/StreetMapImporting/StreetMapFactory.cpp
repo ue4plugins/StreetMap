@@ -287,6 +287,7 @@ bool UStreetMapFactory::LoadFromOpenStreetMapXMLFile( UStreetMap* StreetMap, FSt
 				}
 
 				NewBuilding.Height = OSMWay.Height * OSMToCentimetersScaleFactor;
+				NewBuilding.BuildingLevels = OSMWay.BuildingLevels;
 
 				NewBuilding.BoundsMin = BoundsMin;
 				NewBuilding.BoundsMax = BoundsMax;

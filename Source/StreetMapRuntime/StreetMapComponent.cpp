@@ -220,6 +220,7 @@ void UStreetMapComponent::GenerateMesh()
 	//
 	const float RoadZ = MeshBuildSettings.RoadOffesetZ;
 	const bool bWant3DBuildings = MeshBuildSettings.bWant3DBuildings;
+	const float BuildingLevelFloorFactor = MeshBuildSettings.BuildingLevelFloorFactor;
 	const bool bWantLitBuildings = MeshBuildSettings.bWantLitBuildings;
 	const bool bWantBuildingBorderOnGround = !bWant3DBuildings;
 	const float StreetThickness = MeshBuildSettings.StreetThickness;
@@ -306,7 +307,18 @@ void UStreetMapComponent::GenerateMesh()
 				//        in a consistent direction, so we can skip determining the winding above.
 
 				const int32 FirstTopVertexIndex = this->Vertices.Num();
-				const float BuildingFillZ = bWant3DBuildings ? Building.Height : 0.0f;
+
+				// calculate fill Z for buildings
+				// either use the defined height or extrapolate from building level count
+				float BuildingFillZ = 0.0f;
+				if (bWant3DBuildings) {
+					if (Building.Height > 0) {
+						BuildingFillZ = Building.Height;
+					}
+					else if (Building.BuildingLevels > 0) {
+						BuildingFillZ = (float)Building.BuildingLevels * BuildingLevelFloorFactor;
+					}
+				}		
 
 				// Top of building
 				{
@@ -318,7 +330,7 @@ void UStreetMapComponent::GenerateMesh()
 					AddTriangles( TempPoints, TriangulatedVertexIndices, FVector::ForwardVector, FVector::UpVector, BuildingFillColor, MeshBoundingBox );
 				}
 
-				if( bWant3DBuildings && Building.Height > KINDA_SMALL_NUMBER )
+				if( bWant3DBuildings && (Building.Height > KINDA_SMALL_NUMBER || Building.BuildingLevels > 0) )
 				{
 					// NOTE: Lit buildings can't share vertices beyond quads (all quads have their own face normals), so this uses a lot more geometry!
 					if( bWantLitBuildings )
