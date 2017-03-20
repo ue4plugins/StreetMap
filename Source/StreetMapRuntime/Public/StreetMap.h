@@ -48,13 +48,13 @@ public:
 
 	/** if true buildings mesh will be 3D instead of flat representation. */
 	UPROPERTY(Category = StreetMap, EditAnywhere, DisplayName = "Create 3D Buildings")
-	uint32 bWant3DBuildings : 1;
+		uint32 bWant3DBuildings : 1;
 
 	/** building level floor conversion factor in centimeters
 		@todo: harmonize with OSMToCentimetersScaleFactor refactoring
 	*/
 	UPROPERTY(Category = StreetMap, EditAnywhere, DisplayName = "Building Level Floor Factor")
-	float bBuildingLevelFloorFactor = 300.0f;
+		float BuildingLevelFloorFactor = 300.0f;
 
 	/**
 	* If true, buildings mesh will receive light information.

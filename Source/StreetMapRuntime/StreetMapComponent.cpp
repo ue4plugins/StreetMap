@@ -220,7 +220,7 @@ void UStreetMapComponent::GenerateMesh()
 	//
 	const float RoadZ = MeshBuildSettings.RoadOffesetZ;
 	const bool bWant3DBuildings = MeshBuildSettings.bWant3DBuildings;
-	const float bBuildingLevelFloorFactor = MeshBuildSettings.bBuildingLevelFloorFactor;
+	const float BuildingLevelFloorFactor = MeshBuildSettings.BuildingLevelFloorFactor;
 	const bool bWantLitBuildings = MeshBuildSettings.bWantLitBuildings;
 	const bool bWantBuildingBorderOnGround = !bWant3DBuildings;
 	const float StreetThickness = MeshBuildSettings.StreetThickness;
@@ -316,7 +316,7 @@ void UStreetMapComponent::GenerateMesh()
 						BuildingFillZ = Building.Height;
 					}
 					else if (Building.BuildingLevels > 0) {
-						BuildingFillZ = (float)Building.BuildingLevels * bBuildingLevelFloorFactor;
+						BuildingFillZ = (float)Building.BuildingLevels * BuildingLevelFloorFactor;
 					}
 				}		
 
