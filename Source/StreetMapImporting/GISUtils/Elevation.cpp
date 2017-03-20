@@ -1,5 +1,3 @@
-// Copyright 2017 Richard Schubert. All Rights Reserved.
-
 #include "StreetMapImporting.h"
 #include "StreetMapComponent.h"
 #include "Elevation.h"
@@ -257,16 +255,41 @@ class FElevationModel
 {
 public:
 
-	bool LoadElevationData(const FStreetMapLandscapeBuildSettings& BuildSettings, FScopedSlowTask& SlowTask)
+	bool LoadElevationData(UStreetMapComponent* StreetMapComponent, const FStreetMapLandscapeBuildSettings& BuildSettings, FScopedSlowTask& SlowTask)
 	{
-		// TODO: download correct data
 
 		TArray<TSharedPtr<FCachedElevationFile>> FilesToDownload;
-		FilesToDownload.Add(MakeShared<FCachedElevationFile>(1, 1, 2));
-		FilesToDownload.Add(MakeShared<FCachedElevationFile>(2, 1, 2));
-		FilesToDownload.Add(MakeShared<FCachedElevationFile>(1, 2, 2));
-		FilesToDownload.Add(MakeShared<FCachedElevationFile>(2, 2, 2));
 
+		// 1.) collect all elevation tiles needed based on StreetMap location and Landscape size
+		{
+			UStreetMap* StreetMap = StreetMapComponent->GetStreetMap();
+			const FSpatialReferenceSystem SRS(StreetMap->GetOriginLongitude(), StreetMap->GetOriginLatitude());
+			const FTiledMap TiledElevationMap = FTiledMap::MapzenElevation();
+
+			const FVector2D SouthWest(-BuildSettings.RadiusInMeters, -BuildSettings.RadiusInMeters);
+			const FVector2D NorthEast( BuildSettings.RadiusInMeters,  BuildSettings.RadiusInMeters);
+			double South, West, North, East;
+			if (!SRS.ToEPSG3857(SouthWest, West, South) || !SRS.ToEPSG3857(NorthEast, East, North))
+			{
+				ShowErrorMessage(LOCTEXT("ElevationBoundsInvalid", "Chosen elevation bounds are invalid. Stay within WebMercator bounds!"));
+				return false;
+			}
+
+			// download highest resolution available
+			const uint32 LevelIndex = TiledElevationMap.NumLevels - 1;
+			FIntPoint SouthWestTileXY = TiledElevationMap.GetTileXY(West, South, LevelIndex);
+			FIntPoint NorthEastTileXY = TiledElevationMap.GetTileXY(East, North, LevelIndex);
+
+			for (int32 Y = SouthWestTileXY.Y; Y <= NorthEastTileXY.Y; Y++)
+			{
+				for (int32 X = SouthWestTileXY.X; X <= NorthEastTileXY.X; X++)
+				{
+					FilesToDownload.Add(MakeShared<FCachedElevationFile>(X, Y, LevelIndex));
+				}
+			}
+		}
+
+		// 2.) download the data from web service or disk if already cached
 		const int32 NumFilesToDownload = FilesToDownload.Num();
 		while (FilesToDownload.Num())
 		{
@@ -309,7 +332,10 @@ public:
 			Arguments.Add(TEXT("NumFilesToDownload"), FText::AsNumber(NumFilesToDownload));
 			SlowTask.EnterProgressFrame(Progress, FText::Format(LOCTEXT("DownloadingElevationModel", "Downloading Elevation Model ({NumFilesDownloaded} of {NumFilesToDownload})"), Arguments));
 
-			FPlatformProcess::Sleep(0.1f);
+			if (Progress == 0.0f)
+			{
+				FPlatformProcess::Sleep(0.1f);
+			}
 		}
 
 		if (FilesDownloaded.Num() < NumFilesToDownload)
@@ -325,20 +351,16 @@ public:
 	{
 		SlowTask.EnterProgressFrame(0.0f, LOCTEXT("ReprojectingElevationModel", "Reprojecting Elevation Model"));
 
-		UStreetMap* StreetMap = StreetMapComponent->GetStreetMap();
-
-
-		const int32 SizeX = BuildSettings.RadiusInMeters;
-		const int32 SizeY = BuildSettings.RadiusInMeters;
-
-		OutElevationData.SetNumUninitialized(SizeX * SizeY);
-
+		const int32 SizeX = BuildSettings.RadiusInMeters * 2;
+		const int32 SizeY = BuildSettings.RadiusInMeters * 2;
 		const uint16 ZeroElevationOffset = 32768;
 
+		UStreetMap* StreetMap = StreetMapComponent->GetStreetMap();
 		const FSpatialReferenceSystem SRS(StreetMap->GetOriginLongitude(), StreetMap->GetOriginLatitude());
-
+		const FTiledMap TiledElevationMap = FTiledMap::MapzenElevation();
 
 		// sample elevation value for each height map vertex
+		OutElevationData.SetNumUninitialized(SizeX * SizeY);
 		uint16* Elevation = OutElevationData.GetData();
 		for (int32 y = 0; y < SizeY; y++)
 		{
@@ -371,8 +393,8 @@ ALandscape* CreateLandscape(UWorld* World, const FStreetMapLandscapeBuildSetting
 	FScopedTransaction Transaction(LOCTEXT("Undo", "Creating New Landscape"));
 	ALandscape* Landscape = World->SpawnActor<ALandscape>();
 
-	const int32 SizeX = BuildSettings.RadiusInMeters;
-	const int32 SizeY = BuildSettings.RadiusInMeters;
+	const int32 SizeX = BuildSettings.RadiusInMeters * 2;
+	const int32 SizeY = BuildSettings.RadiusInMeters * 2;
 
 	// create import layers
 	TArray<FLandscapeImportLayerInfo> ImportLayers;
@@ -404,7 +426,9 @@ ALandscape* CreateLandscape(UWorld* World, const FStreetMapLandscapeBuildSetting
 	}
 
 	Landscape->LandscapeMaterial = BuildSettings.Material;
-	Landscape->Import(FGuid::NewGuid(), 0, 0, SizeX - 1, SizeY - 1,
+	Landscape->Import(FGuid::NewGuid(), 
+		-BuildSettings.RadiusInMeters, -BuildSettings.RadiusInMeters, 
+		 BuildSettings.RadiusInMeters - 1, BuildSettings.RadiusInMeters - 1,
 		1, 31, ElevationData.GetData(), nullptr,
 		ImportLayers, ELandscapeImportAlphamapType::Additive);
 
@@ -446,7 +470,7 @@ ALandscape* BuildLandscape(UStreetMapComponent* StreetMapComponent, UWorld* Worl
 
 	FElevationModel ElevationModel;
 
-	if (!ElevationModel.LoadElevationData(BuildSettings, SlowTask))
+	if (!ElevationModel.LoadElevationData(StreetMapComponent, BuildSettings, SlowTask))
 	{
 		return nullptr;
 	}

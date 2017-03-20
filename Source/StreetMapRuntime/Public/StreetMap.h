@@ -121,7 +121,7 @@ struct STREETMAPRUNTIME_API FStreetMapLandscapeBuildSettings
 
 public:
 
-	UPROPERTY(Category = "Landscape", EditAnywhere, meta = (UIMin = 1, ClampMin = 256, ClampMax = 8192))
+	UPROPERTY(Category = "Landscape", EditAnywhere, meta = (UIMin = 1, ClampMin = 256, ClampMax = 4096))
 		int32 RadiusInMeters;
 
 	// Material initially applied to the landscape. Setting a material here exposes properties for setting up layer info based on the landscape blend nodes in the material.
