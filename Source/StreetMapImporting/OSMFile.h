@@ -165,6 +165,7 @@ public:
 		TArray<FOSMNodeInfo*> Nodes;
 		EOSMWayType WayType;
 		double Height;
+		int32 BuildingLevels;
 
 		// If true, way is only traversable in the order the nodes are listed in the Nodes list
 		uint8 bIsOneWay : 1;
