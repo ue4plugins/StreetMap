@@ -54,12 +54,10 @@ static FString GetCachedFilePath(uint32 X, uint32 Y, uint32 Z)
 	return FilePath;
 }
 
-static const int32 ExpectedElevationTileSize = 256;
-
 class FCachedElevationFile
 {
 private:
-	const FString URLTemplate = TEXT("http://s3.amazonaws.com/elevation-tiles-prod/terrarium/%d/%d/%d.png");
+	const FTiledMap& TiledMap;
 
 	bool WasInitialized;
 	bool WasDownloadASuccess;
@@ -82,21 +80,16 @@ private:
 			const int32 Width = PngImageWrapper->GetWidth();
 			const int32 Height = PngImageWrapper->GetHeight();
 
-			if (Width != ExpectedElevationTileSize || Height != ExpectedElevationTileSize)
+			if (Width != TiledMap.TileWidth || Height != TiledMap.TileHeight)
 			{
-				GWarn->Logf(ELogVerbosity::Error, TEXT("PNG file has wrong dimensions. Expected %dx%d"), ExpectedElevationTileSize, ExpectedElevationTileSize);
+				GWarn->Logf(ELogVerbosity::Error, TEXT("PNG file has wrong dimensions. Expected %dx%d"), TiledMap.TileWidth, TiledMap.TileHeight);
 				return false;
 			}
 
-			if ((Format != ERGBFormat::RGBA && Format != ERGBFormat::BGRA) || BitDepth > 8)
+			if ((Format != ERGBFormat::RGBA) || BitDepth != 8)
 			{
 				GWarn->Logf(ELogVerbosity::Error, TEXT("PNG file contains elevation data in an unsupported format."));
 				return false;
-			}
-
-			if (BitDepth <= 8)
-			{
-				BitDepth = 8;
 			}
 
 			const TArray<uint8>* RawPNG = nullptr;
@@ -115,7 +108,7 @@ private:
 
 					ElevationData++;
 					Data += 4;
-				}				
+				}
 			}
 
 			return true;
@@ -145,7 +138,7 @@ private:
 
 	void DownloadFile()
 	{
-		FString URL = FString::Printf(*URLTemplate, Z, X, Y);
+		FString URL = FString::Printf(*TiledMap.URLTemplate, Z, X, Y);
 
 		HttpRequest = FHttpModule::Get().CreateRequest();
 		HttpRequest->SetVerb(TEXT("GET"));
@@ -180,7 +173,7 @@ protected:
 	TArray<float> Elevation;
 	uint32 X, Y, Z;
 
-	friend class ElevationModel;
+	friend class FElevationModel;
 
 public:
 
@@ -239,8 +232,9 @@ public:
 		HttpRequest->Tick(0);
 	}
 
-	FCachedElevationFile(uint32 X, uint32 Y, uint32 Z)
-		: WasInitialized(false)
+	FCachedElevationFile(const FTiledMap& TiledMap, uint32 X, uint32 Y, uint32 Z)
+		: TiledMap(TiledMap)
+		, WasInitialized(false)
 		, WasDownloadASuccess(false)
 		, Failed(false)
 		, StartTime(FDateTime::UtcNow())
@@ -255,19 +249,23 @@ class FElevationModel
 {
 public:
 
-	bool LoadElevationData(UStreetMapComponent* StreetMapComponent, const FStreetMapLandscapeBuildSettings& BuildSettings, FScopedSlowTask& SlowTask)
+	FElevationModel(const FTiledMap& TiledMap)
+		: TiledMap(TiledMap)
 	{
 
+	}
+
+	bool LoadElevationData(UStreetMapComponent* StreetMapComponent, const FStreetMapLandscapeBuildSettings& BuildSettings, FScopedSlowTask& SlowTask)
+	{
 		TArray<TSharedPtr<FCachedElevationFile>> FilesToDownload;
 
 		// 1.) collect all elevation tiles needed based on StreetMap location and Landscape size
 		{
 			UStreetMap* StreetMap = StreetMapComponent->GetStreetMap();
 			const FSpatialReferenceSystem SRS(StreetMap->GetOriginLongitude(), StreetMap->GetOriginLatitude());
-			const FTiledMap TiledElevationMap = FTiledMap::MapzenElevation();
 
-			const FVector2D SouthWest(-BuildSettings.RadiusInMeters, -BuildSettings.RadiusInMeters);
-			const FVector2D NorthEast( BuildSettings.RadiusInMeters,  BuildSettings.RadiusInMeters);
+			const FVector2D SouthWest(-BuildSettings.RadiusInMeters,  BuildSettings.RadiusInMeters);
+			const FVector2D NorthEast( BuildSettings.RadiusInMeters, -BuildSettings.RadiusInMeters);
 			double South, West, North, East;
 			if (!SRS.ToEPSG3857(SouthWest, West, South) || !SRS.ToEPSG3857(NorthEast, East, North))
 			{
@@ -276,15 +274,15 @@ public:
 			}
 
 			// download highest resolution available
-			const uint32 LevelIndex = TiledElevationMap.NumLevels - 1;
-			FIntPoint SouthWestTileXY = TiledElevationMap.GetTileXY(West, South, LevelIndex);
-			FIntPoint NorthEastTileXY = TiledElevationMap.GetTileXY(East, North, LevelIndex);
+			const uint32 LevelIndex = TiledMap.NumLevels - 1;
+			FIntPoint SouthWestTileXY = TiledMap.GetTileXY(West, South, LevelIndex);
+			FIntPoint NorthEastTileXY = TiledMap.GetTileXY(East, North, LevelIndex);
 
 			for (int32 Y = SouthWestTileXY.Y; Y <= NorthEastTileXY.Y; Y++)
 			{
 				for (int32 X = SouthWestTileXY.X; X <= NorthEastTileXY.X; X++)
 				{
-					FilesToDownload.Add(MakeShared<FCachedElevationFile>(X, Y, LevelIndex));
+					FilesToDownload.Add(MakeShared<FCachedElevationFile>(TiledMap, X, Y, LevelIndex));
 				}
 			}
 		}
@@ -351,28 +349,38 @@ public:
 	{
 		SlowTask.EnterProgressFrame(0.0f, LOCTEXT("ReprojectingElevationModel", "Reprojecting Elevation Model"));
 
+		UStreetMap* StreetMap = StreetMapComponent->GetStreetMap();
+		const FSpatialReferenceSystem SRS(StreetMap->GetOriginLongitude(), StreetMap->GetOriginLatitude());
+
+		const uint32 LevelIndex = TiledMap.NumLevels - 1;
 		const int32 SizeX = BuildSettings.RadiusInMeters * 2;
 		const int32 SizeY = BuildSettings.RadiusInMeters * 2;
 		const uint16 ZeroElevationOffset = 32768;
 
-		UStreetMap* StreetMap = StreetMapComponent->GetStreetMap();
-		const FSpatialReferenceSystem SRS(StreetMap->GetOriginLongitude(), StreetMap->GetOriginLatitude());
-		const FTiledMap TiledElevationMap = FTiledMap::MapzenElevation();
-
 		// sample elevation value for each height map vertex
 		OutElevationData.SetNumUninitialized(SizeX * SizeY);
 		uint16* Elevation = OutElevationData.GetData();
-		for (int32 y = 0; y < SizeY; y++)
+		for (int32 Y = -BuildSettings.RadiusInMeters; Y < BuildSettings.RadiusInMeters; Y++)
 		{
-			for (int32 x = 0; x < SizeX; x++)
+			for (int32 X = -BuildSettings.RadiusInMeters; X < BuildSettings.RadiusInMeters; X++)
 			{
-				int ElevationOffset = 0;
+				int32 ElevationOffset = 0;
 
 				double WebMercatorX, WebMercatorY;
-				FVector2D VertexLocation(x, y);
+				FVector2D VertexLocation(X, Y);
 				if (SRS.ToEPSG3857(VertexLocation, WebMercatorX, WebMercatorY))
 				{
-					// TODO: sample elevation at coordinates WebMercatorX/WebMercatorY
+					FVector2D PixelXY;
+					const auto TileXY = TiledMap.GetTileXY(WebMercatorX, WebMercatorY, LevelIndex, PixelXY);
+					const auto Tile = GetTile(TileXY, LevelIndex);
+
+					const float* ElevationData = Tile->Elevation.GetData();
+
+					// @todo: sample elevation using Lanczos filtering
+
+					int32 ElevationX = (int32)PixelXY.X;
+					int32 ElevationY = (int32)PixelXY.Y;
+					ElevationOffset = (int32)(ElevationData[TiledMap.TileWidth * ElevationY + ElevationX] * 10.0f);
 				}
 
 				*Elevation = (uint16)(ZeroElevationOffset + ElevationOffset);
@@ -382,7 +390,20 @@ public:
 	}
 
 private:
+	const FTiledMap TiledMap;
 	TArray<TSharedPtr<FCachedElevationFile>> FilesDownloaded;
+
+	FCachedElevationFile* GetTile(const FIntPoint& XY, uint32 LevelIndex)
+	{
+		for (auto& Tile : FilesDownloaded)
+		{
+			if (Tile->X == XY.X && Tile->Y == XY.Y && Tile->Z == LevelIndex)
+			{
+				return Tile.Get();
+			}
+		}
+		return nullptr;
+	}
 };
 
 
@@ -429,7 +450,7 @@ ALandscape* CreateLandscape(UWorld* World, const FStreetMapLandscapeBuildSetting
 	Landscape->Import(FGuid::NewGuid(), 
 		-BuildSettings.RadiusInMeters, -BuildSettings.RadiusInMeters, 
 		 BuildSettings.RadiusInMeters - 1, BuildSettings.RadiusInMeters - 1,
-		1, 31, ElevationData.GetData(), nullptr,
+		1, 255, ElevationData.GetData(), nullptr,
 		ImportLayers, ELandscapeImportAlphamapType::Additive);
 
 	// automatically calculate a lighting LOD that won't crash lightmass (hopefully)
@@ -468,8 +489,7 @@ ALandscape* BuildLandscape(UStreetMapComponent* StreetMapComponent, UWorld* Worl
 	FScopedSlowTask SlowTask(2.0f, LOCTEXT("GeneratingLandscape", "Generating Landscape"));
 	SlowTask.MakeDialog(true);
 
-	FElevationModel ElevationModel;
-
+	FElevationModel ElevationModel(FTiledMap::MapzenElevation());
 	if (!ElevationModel.LoadElevationData(StreetMapComponent, BuildSettings, SlowTask))
 	{
 		return nullptr;
