@@ -29,9 +29,9 @@ public:
 		TiledMap.TileHeight = 256;
 		TiledMap.NumLevels = 15;
 		TiledMap.Bounds.MinX = -20037508.34;
-		TiledMap.Bounds.MinY = -20037508.34;
+		TiledMap.Bounds.MinY =  20037508.34;
 		TiledMap.Bounds.MaxX =  20037508.34;
-		TiledMap.Bounds.MaxY =  20037508.34;
+		TiledMap.Bounds.MaxY = -20037508.34;
 		TiledMap.URLTemplate = TEXT("http://s3.amazonaws.com/elevation-tiles-prod/terrarium/%d/%d/%d.png");
 		return TiledMap;
 	}

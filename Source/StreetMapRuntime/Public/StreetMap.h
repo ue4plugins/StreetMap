@@ -126,9 +126,13 @@ struct STREETMAPRUNTIME_API FStreetMapLandscapeBuildSettings
 	GENERATED_USTRUCT_BODY()
 
 public:
+	// Distance between elevation data points in meters. Keep in mind that elevation data is usually available in 10-30 meter resolution. Anything in between will be interpolated.
+	UPROPERTY(Category = "Landscape", EditAnywhere, meta = (UIMin = 1, ClampMin = 0.25f, ClampMax = 100.0f))
+		float QuadSize;
 
-	UPROPERTY(Category = "Landscape", EditAnywhere, meta = (UIMin = 1, ClampMin = 256, ClampMax = 4096))
-		int32 RadiusInMeters;
+	// Minimal size of the Landscape in each direction around the center of the OpenStreetMap in meters.
+	UPROPERTY(Category = "Landscape", EditAnywhere, meta = (UIMin = 1, ClampMin = 256, ClampMax = 16384))
+		int32 Radius;
 
 	// Material initially applied to the landscape. Setting a material here exposes properties for setting up layer info based on the landscape blend nodes in the material.
 	UPROPERTY(Category = "Landscape", EditAnywhere, meta = (DisplayName = "Material", ShowForTools = "Landscape"))
@@ -137,9 +141,10 @@ public:
 	// The landscape layers that will be created. Only layer names referenced in the material assigned above are shown here. Modify the material to add more layers.
 	UPROPERTY(Category = "Landscape", EditAnywhere, NonTransactional, EditFixedSize, meta = (DisplayName = "Layers", ShowForTools = "Landscape"))
 		TArray<FLandscapeImportLayerInfo> Layers;
-	
+
 	FStreetMapLandscapeBuildSettings() 
-		: RadiusInMeters(512)
+		: QuadSize(4.0f)
+		, Radius(8192)
 		, Material(nullptr)
 	{
 	}
