@@ -401,8 +401,7 @@ public:
 
 	void ReprojectData(UStreetMapComponent* StreetMapComponent, const FStreetMapLandscapeBuildSettings& BuildSettings, FScopedSlowTask& SlowTask, TArray<uint16>& OutElevationData)
 	{
-		SlowTask.EnterProgressFrame(0.0f, LOCTEXT("ReprojectingElevationModel", "Reprojecting Elevation Model"));
-
+		const FText ProgressText = LOCTEXT("ReprojectingElevationModel", "Reprojecting Elevation Model");
 		const UStreetMap* StreetMap = StreetMapComponent->GetStreetMap();
 		const FSpatialReferenceSystem SRS(StreetMap->GetOriginLongitude(), StreetMap->GetOriginLatitude());
 
@@ -411,6 +410,8 @@ public:
 		const int32 Size = NumVerticesForRadius * 2;
 		const float ElevationRange = ElevationMax - ElevationMin;
 		const float ElevationScale = 65535.0f / ElevationRange;
+
+		const float ProgressPerRow = 0.5f / Size;
 
 		// sample elevation value for each height map vertex
 		OutElevationData.SetNumUninitialized(Size * Size);
@@ -444,6 +445,8 @@ public:
 				*Elevation = QuantizedElevation;
 				Elevation++;
 			}
+
+			SlowTask.EnterProgressFrame(ProgressPerRow, ProgressText);
 		}
 
 		// compute exact scale of landscape
@@ -482,7 +485,7 @@ private:
 
 ALandscape* CreateLandscape(UWorld* World, const FStreetMapLandscapeBuildSettings& BuildSettings, const FTransform& Transform, const TArray<uint16>& ElevationData, FScopedSlowTask& SlowTask)
 {
-	SlowTask.EnterProgressFrame(0.0f, LOCTEXT("CreatingLandscape", "Filling Landscape with data"));
+	SlowTask.EnterProgressFrame(0.25f, LOCTEXT("CreatingLandscape", "Filling Landscape with data"));
 
 	FScopedTransaction Transaction(LOCTEXT("Undo", "Creating New Landscape"));
 
