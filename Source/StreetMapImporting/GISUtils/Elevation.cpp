@@ -57,6 +57,9 @@ static FString GetCachedFilePath(uint32 X, uint32 Y, uint32 Z)
 class FCachedElevationFile
 {
 private:
+	const int32 MaxNumPendingDownloads = 10;
+	static int32 NumPendingDownloads;
+
 	const FTiledMap& TiledMap;
 
 	bool WasInitialized;
@@ -127,6 +130,8 @@ private:
 
 	void OnDownloadSucceeded(FHttpResponsePtr Response)
 	{
+		NumPendingDownloads--;
+
 		// unpack data
 		if (Response.IsValid())
 		{
@@ -152,7 +157,11 @@ private:
 		HttpRequest->SetVerb(TEXT("GET"));
 
 		HttpRequest->SetURL(URL);
-		if (!HttpRequest->ProcessRequest())
+		if (HttpRequest->ProcessRequest())
+		{
+			NumPendingDownloads++;
+		}
+		else
 		{
 			Failed = true;
 		}
@@ -161,11 +170,12 @@ private:
 	void Initialize()
 	{
 		WasInitialized = true;
+		StartTime = FDateTime::UtcNow();
 
 		// try to load data from cache first
 		{
 			TArray<uint8> RawData;
-			if (FFileHelper::LoadFileToArray(RawData, *GetCachedFilePath(X, Y, Z)))
+			if (FFileHelper::LoadFileToArray(RawData, *GetCachedFilePath(X, Y, Z), FILEREAD_Silent))
 			{
 				if (UnpackElevation(RawData))
 				{
@@ -174,6 +184,7 @@ private:
 				}
 			}
 		}
+		
 		DownloadFile();
 	}
 
@@ -201,6 +212,7 @@ public:
 	void CancelRequest()
 	{
 		Failed = true;
+		NumPendingDownloads--;
 		HttpRequest->CancelRequest();
 	}
 
@@ -208,6 +220,11 @@ public:
 	{
 		if (!WasInitialized)
 		{
+			if (NumPendingDownloads >= MaxNumPendingDownloads)
+			{
+				return;
+			}
+
 			Initialize();
 		}
 
@@ -216,6 +233,7 @@ public:
 		if (TimeSpan.GetSeconds() > 10)
 		{
 			GWarn->Logf(ELogVerbosity::Error, TEXT("Download time-out. Check your internet connection!"));
+			NumPendingDownloads--;
 			Failed = true;
 			HttpRequest->CancelRequest();
 			return;
@@ -229,6 +247,7 @@ public:
 			HttpRequest->GetStatus() == EHttpRequestStatus::Failed_ConnectionError)
 		{
 			GWarn->Logf(ELogVerbosity::Error, TEXT("Download connection failure. Check your internet connection!"));
+			NumPendingDownloads--;
 			Failed = true;
 			HttpRequest->CancelRequest();
 			return;
@@ -257,6 +276,8 @@ public:
 	{
 	}
 };
+
+int32 FCachedElevationFile::NumPendingDownloads = 0;
 
 static int32 GetNumVerticesForRadius(const FStreetMapLandscapeBuildSettings& BuildSettings)
 {
