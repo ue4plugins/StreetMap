@@ -213,6 +213,8 @@ void FStreetMapComponentDetails::CustomizeDetails(IDetailLayoutBuilder& DetailBu
 
 		TSharedRef<IPropertyHandle> PropertyHandle_Material = DetailBuilder.GetProperty("LandscapeSettings.Material");
 		PropertyHandle_Material->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FStreetMapComponentDetails::RefreshLandscapeLayersList));
+
+		RefreshLandscapeLayersList();
 	}
 }
 

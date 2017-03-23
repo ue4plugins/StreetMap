@@ -45,6 +45,11 @@ UStreetMapComponent::UStreetMapComponent(const FObjectInitializer& ObjectInitial
 	static ConstructorHelpers::FObjectFinder<UMaterialInterface> DefaultMaterialAsset(TEXT("/StreetMap/StreetMapDefaultMaterial"));
 	StreetMapDefaultMaterial = DefaultMaterialAsset.Object;
 
+	if (GEngine)
+	{
+		static ConstructorHelpers::FObjectFinder<UMaterialInterface> DefaultLandscapeMaterialAsset(TEXT("/StreetMap/LandscapeDefaultMaterial"));
+		LandscapeSettings.Material = DefaultLandscapeMaterialAsset.Object;
+	}
 }
 
 
