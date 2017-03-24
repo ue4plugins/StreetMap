@@ -212,8 +212,11 @@ public:
 	void CancelRequest()
 	{
 		Failed = true;
-		NumPendingDownloads--;
-		HttpRequest->CancelRequest();
+		if (HttpRequest.IsValid())
+		{
+			NumPendingDownloads--;
+			HttpRequest->CancelRequest();
+		}
 	}
 
 	void Tick()
@@ -507,20 +510,25 @@ ALandscape* CreateLandscape(UWorld* World, const FStreetMapLandscapeBuildSetting
 			ImportLayer.LayerInfo = UIImportLayer.LayerInfo;
 			ImportLayer.SourceFilePath = "";
 			ImportLayer.LayerData = TArray<uint8>();
+
+			// @todo: fill the blend weights based on land use
+			// for now Fill the first weight-blended layer to 100%
+			const uint8 LayerBlendVaule = ImportLayers.Num() == 0 ? 255 : 0;
+			{
+				ImportLayer.LayerData.SetNumUninitialized(Size * Size);
+
+				uint8* ByteData = ImportLayer.LayerData.GetData();
+				for (int32 i = 0; i < Size * Size; i++)
+				{
+					ByteData[i] = LayerBlendVaule;
+				}
+
+				ByteData[0] = 1; // Ensure at least one pixel has a value to keep this layer in editor settings
+			}
+
 			ImportLayers.Add(MoveTemp(ImportLayer));
 		}
 
-		// @todo: fill the blend weights based on land use
-		// for now Fill the first weight-blended layer to 100%
-		{
-			ImportLayers[0].LayerData.SetNumUninitialized(Size * Size);
-
-			uint8* ByteData = ImportLayers[0].LayerData.GetData();
-			for (int32 i = 0; i < Size * Size; i++)
-			{
-				ByteData[i] = 255;
-			}
-		}
 	}
 
 	int32 SubsectionSizeQuads = FMath::RoundUpToPowerOfTwo(Size) / 32 - 1;
@@ -538,26 +546,6 @@ ALandscape* CreateLandscape(UWorld* World, const FStreetMapLandscapeBuildSetting
 	// >= 4096x4096 -> LOD2
 	// >= 8192x8192 -> LOD3
 	Landscape->StaticLightingLOD = FMath::DivideAndRoundUp(FMath::CeilLogTwo((Size * Size) / (2048 * 2048) + 1), (uint32)2);
-
-	/*ULandscapeInfo* LandscapeInfo = Landscape->CreateLandscapeInfo();
-	LandscapeInfo->UpdateLayerInfoMap(Landscape);
-
-	// Import doesn't fill in the LayerInfo for layers with no data, do that now
-	const TArray<FLandscapeImportLayerInfo>& ImportLandscapeLayersList = BuildSettings.Layers;
-	for (int32 i = 0; i < ImportLandscapeLayersList.Num(); i++)
-	{
-		if (ImportLandscapeLayersList[i].LayerInfo != nullptr)
-		{
-			Landscape->EditorLayerSettings.Add(FLandscapeEditorLayerSettings(ImportLandscapeLayersList[i].LayerInfo));
-
-			int32 LayerInfoIndex = LandscapeInfo->GetLayerInfoIndex(ImportLandscapeLayersList[i].LayerName);
-			if (ensure(LayerInfoIndex != INDEX_NONE))
-			{
-				FLandscapeInfoLayerSettings& LayerSettings = LandscapeInfo->Layers[LayerInfoIndex];
-				LayerSettings.LayerInfoObj = ImportLandscapeLayersList[i].LayerInfo;
-			}
-		}
-	}*/
 
 	return Landscape;
 }

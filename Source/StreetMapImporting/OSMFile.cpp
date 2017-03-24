@@ -179,15 +179,18 @@ bool FOSMFile::ProcessAttribute( const TCHAR* AttributeName, const TCHAR* Attrib
 		if( !FCString::Stricmp( AttributeName, TEXT( "ref" ) ) )
 		{
 			FOSMNodeInfo* ReferencedNode = NodeMap.FindRef( FPlatformString::Atoi64( AttributeValue ) );
-			const int NewNodeIndex = CurrentWayInfo->Nodes.Num();
-			CurrentWayInfo->Nodes.Add( ReferencedNode );
-					
-			// Update the node with information about the way that is referencing it
+			if(ReferencedNode)
 			{
-				FOSMWayRef NewWayRef;
-				NewWayRef.Way = CurrentWayInfo;
-				NewWayRef.NodeIndex = NewNodeIndex;
-				ReferencedNode->WayRefs.Add( NewWayRef );
+				const int NewNodeIndex = CurrentWayInfo->Nodes.Num();
+				CurrentWayInfo->Nodes.Add( ReferencedNode );
+					
+				// Update the node with information about the way that is referencing it
+				{
+					FOSMWayRef NewWayRef;
+					NewWayRef.Way = CurrentWayInfo;
+					NewWayRef.NodeIndex = NewNodeIndex;
+					ReferencedNode->WayRefs.Add( NewWayRef );
+				}
 			}
 		}
 	}

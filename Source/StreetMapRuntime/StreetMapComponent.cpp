@@ -12,6 +12,7 @@
 #if WITH_EDITOR
 #include "ModuleManager.h"
 #include "PropertyEditorModule.h"
+#include "LandscapeLayerInfoObject.h"
 #endif //WITH_EDITOR
 
 
@@ -45,11 +46,29 @@ UStreetMapComponent::UStreetMapComponent(const FObjectInitializer& ObjectInitial
 	static ConstructorHelpers::FObjectFinder<UMaterialInterface> DefaultMaterialAsset(TEXT("/StreetMap/StreetMapDefaultMaterial"));
 	StreetMapDefaultMaterial = DefaultMaterialAsset.Object;
 
+#if WITH_EDITOR
 	if (GEngine)
 	{
 		static ConstructorHelpers::FObjectFinder<UMaterialInterface> DefaultLandscapeMaterialAsset(TEXT("/StreetMap/LandscapeDefaultMaterial"));
 		LandscapeSettings.Material = DefaultLandscapeMaterialAsset.Object;
+
+		TArray<FName> LayerNames = ALandscapeProxy::GetLayersFromMaterial(LandscapeSettings.Material);
+		LandscapeSettings.Layers.Reset(LayerNames.Num());
+		for (int32 i = 0; i < LayerNames.Num(); i++)
+		{
+			const FName& LayerName = LayerNames[i];
+
+			const FString LayerInfoAssetPath = TEXT("/StreetMap/Landscape_") + LayerName.ToString() + TEXT("_DefaultLayerInfo");
+			ConstructorHelpers::FObjectFinder<ULandscapeLayerInfoObject> DefaultLandscapeLayerInfoAsset(*LayerInfoAssetPath);
+
+			FLandscapeImportLayerInfo NewImportLayer;
+			NewImportLayer.LayerName = LayerName;
+			NewImportLayer.LayerInfo = DefaultLandscapeLayerInfoAsset.Object;
+
+			LandscapeSettings.Layers.Add(MoveTemp(NewImportLayer));
+		}
 	}
+#endif
 }
 
 

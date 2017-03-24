@@ -126,7 +126,7 @@ struct STREETMAPRUNTIME_API FStreetMapLandscapeBuildSettings
 	GENERATED_USTRUCT_BODY()
 
 public:
-	// Distance between elevation data points in meters. Keep in mind that elevation data is usually available in 10-30 meter resolution. Anything in between will be interpolated.
+	// Horizontal distance between elevation data points in meters. Keep in mind that elevation data is usually available in 10-30 meter resolution. Anything in between will be interpolated.
 	UPROPERTY(Category = "Landscape", EditAnywhere, meta = (UIMin = 1, ClampMin = 0.25f, ClampMax = 100.0f))
 		float QuadSize;
 
