@@ -13,6 +13,7 @@
 #include "ScopedTransaction.h"
 #include "SpatialReferenceSystem.h"
 #include "TiledMap.h"
+#include "LandscapeInfo.h"
 
 #define LOCTEXT_NAMESPACE "StreetMapImporting"
 
@@ -500,11 +501,10 @@ ALandscape* CreateLandscape(UWorld* World, const FStreetMapLandscapeBuildSetting
 	// create import layers
 	TArray<FLandscapeImportLayerInfo> ImportLayers;
 	{
-		const auto& ImportLandscapeLayersList = BuildSettings.Layers;
-		ImportLayers.Reserve(ImportLandscapeLayersList.Num());
+		ImportLayers.Reserve(BuildSettings.Layers.Num());
 
 		// Fill in LayerInfos array and allocate data
-		for (const FLandscapeImportLayerInfo& UIImportLayer : ImportLandscapeLayersList)
+		for (const FLandscapeImportLayerInfo& UIImportLayer : BuildSettings.Layers)
 		{
 			FLandscapeImportLayerInfo ImportLayer = FLandscapeImportLayerInfo(UIImportLayer.LayerName);
 			ImportLayer.LayerInfo = UIImportLayer.LayerInfo;
@@ -547,11 +547,32 @@ ALandscape* CreateLandscape(UWorld* World, const FStreetMapLandscapeBuildSetting
 	// >= 8192x8192 -> LOD3
 	Landscape->StaticLightingLOD = FMath::DivideAndRoundUp(FMath::CeilLogTwo((Size * Size) / (2048 * 2048) + 1), (uint32)2);
 
+	// create Landscape info
+	{
+		ULandscapeInfo* LandscapeInfo = Landscape->CreateLandscapeInfo();
+		LandscapeInfo->UpdateLayerInfoMap(Landscape);
+
+		for (int32 i = 0; i < BuildSettings.Layers.Num(); i++)
+		{
+			if (BuildSettings.Layers[i].LayerInfo != nullptr)
+			{
+				Landscape->EditorLayerSettings.Add(FLandscapeEditorLayerSettings(BuildSettings.Layers[i].LayerInfo));
+
+				int32 LayerInfoIndex = LandscapeInfo->GetLayerInfoIndex(BuildSettings.Layers[i].LayerName);
+				if (ensure(LayerInfoIndex != INDEX_NONE))
+				{
+					FLandscapeInfoLayerSettings& LayerSettings = LandscapeInfo->Layers[LayerInfoIndex];
+					LayerSettings.LayerInfoObj = BuildSettings.Layers[i].LayerInfo;
+				}
+			}
+		}
+	}
+
 	return Landscape;
 }
 
 
-ALandscape* BuildLandscape(UStreetMapComponent* StreetMapComponent, UWorld* World, const FStreetMapLandscapeBuildSettings& BuildSettings)
+ALandscape* BuildLandscape(UStreetMapComponent* StreetMapComponent, const FStreetMapLandscapeBuildSettings& BuildSettings)
 {
 	FScopedSlowTask SlowTask(2.0f, LOCTEXT("GeneratingLandscape", "Generating Landscape"));
 	SlowTask.MakeDialog(true);
@@ -565,5 +586,6 @@ ALandscape* BuildLandscape(UStreetMapComponent* StreetMapComponent, UWorld* Worl
 	TArray<uint16> ElevationData;
 	ElevationModel.ReprojectData(StreetMapComponent, BuildSettings, SlowTask, ElevationData);
 
+	UWorld* World = StreetMapComponent->GetOwner()->GetWorld();
 	return CreateLandscape(World, BuildSettings, ElevationModel.GetTransform(), ElevationData, SlowTask);
 }

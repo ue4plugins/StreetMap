@@ -410,7 +410,7 @@ FReply FStreetMapComponentDetails::OnBuildLandscapeClicked()
 {
 	if (SelectedStreetMapComponent != nullptr)
 	{
-		BuildLandscape(SelectedStreetMapComponent, GWorld, SelectedStreetMapComponent->LandscapeSettings);
+		BuildLandscape(SelectedStreetMapComponent, SelectedStreetMapComponent->LandscapeSettings);
 
 		// regenerates details panel layouts, to take in consideration new changes.
 		RefreshDetails();
