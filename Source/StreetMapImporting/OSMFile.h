@@ -2,6 +2,7 @@
 #pragma once
 
 #include "FastXml.h"
+#include "GISUtils/SpatialReferenceSystem.h"
 
 
 /** OpenStreetMap file loader */
@@ -21,120 +22,25 @@ public:
 
 
 	struct FOSMWayInfo;
-		
+
 	/** Types of ways */
 	enum class EOSMWayType
 	{
-		///
-		/// ROADS
-		///
-		
-		/** A restricted access major divided highway, normally with 2 or more running lanes plus emergency hard shoulder. Equivalent to the Freeway, Autobahn, etc. */
-		Motorway,
+		/** Used for identifying any kind of road, street or path. */
+		Highway,
 
-		/** The link roads (sliproads/ramps) leading to/from a motorway from/to a motorway or lower class highway. Normally with the same motorway restrictions. */
-		Motorway_Link,
-
-		/** The most important roads in a country's system that aren't motorways. (Need not necessarily be a divided highway.) */
-		Trunk,
-
-		/** The link roads (sliproads/ramps) leading to/from a trunk road from/to a trunk road or lower class highway. */
-		Trunk_Link,
-
-		/** The next most important roads in a country's system. (Often link larger towns.) */
-		Primary,
-
-		/** The link roads (sliproads/ramps) leading to/from a primary road from/to a primary road or lower class highway. */
-		Primary_Link,
-
-		/** The next most important roads in a country's system. (Often link smaller towns and villages.) */
-		Secondary,
-
-		/** The link roads (sliproads/ramps) leading to/from a secondary road from/to a secondary road or lower class highway. */
-		Secondary_Link,
-
-		/** The next most important roads in a country's system. */
-		Tertiary,
-
-		/** The link roads (sliproads/ramps) leading to/from a tertiary road from/to a tertiary road or lower class highway. */
-		Tertiary_Link,
-
-		/** Roads which are primarily lined with and serve as an access to housing. */
-		Residential,
-
-		/** For access roads to, or within an industrial estate, camp site, business park, car park etc. */
-		Service,
-
-		/** The least most important through roads in a country's system, i.e. minor roads of a lower classification than tertiary, but which serve a purpose other than access to properties. */
-		Unclassified,
-
-
-		///
-		/// NON-ROADS
-		///
-		
-		/** Residential streets where pedestrians have legal priority over cars, speeds are kept very low and where children are allowed to play on the street. */
-		Living_Street,
-
-		/** For roads used mainly/exclusively for pedestrians in shopping and some residential areas which may allow access by motorised vehicles only for very limited periods of the day. */
-		Pedestrian,
-
-		/** Roads for agricultural or forestry uses etc, often rough with unpaved/unsealed surfaces, that can be used only by off-road vehicles (4WD, tractors, ATVs, etc.) */
-		Track,
-
-		/** A busway where the vehicle guided by the way (though not a railway) and is not suitable for other traffic. */
-		Bus_Guideway,
-
-		/** A course or track for (motor) racing */
-		Raceway,
-
-		/** A road where the mapper is unable to ascertain the classification from the information available. */
-		Road,
-
-
-		///
-		/// PATHS
-		///
-		
-		/** For designated footpaths; i.e., mainly/exclusively for pedestrians. This includes walking tracks and gravel paths. */
-		Footway,
-
-		/** For designated cycleways. */
-		Cycleway,
-
-		/** Paths normally used by horses */
-		Bridleway,
-
-		/** For flights of steps (stairs) on footways. */
-		Steps,
-
-		/** A non-specific path. */
-		Path,
-
-
-		///
-		/// LIFECYCLE
-		///
-		
-		/** For planned roads, use with proposed=* and also proposed=* with a value of the proposed highway value. */
-		Proposed,
-
-		/** For roads under construction. */
-		Construction,
-
-
-		///
-		/// BUILDINGS
-		///
-
-		/** Default type of building.  A general catch-all. */
+		/** Used to mark areas as a building. */
 		Building,
 
+		/** The leisure tag is for places people go in their spare time (e.g. parks, pitches). */
+		Leisure,
 
-		///
-		/// UNSUPPORTED
-		/// 
-		
+		/** Used to describe natural and physical land features (e.g. wood, beach, water). */
+		Natural,
+
+		/** Used to describe the primary use of land by humans (e.g. grass, meadow, forest). */
+		LandUse,
+
 		/** Currently unrecognized type */
 		Other,
 	};
@@ -148,7 +54,7 @@ public:
 		// Index of the node in the way's array of nodes
 		int32 NodeIndex;
 	};
-		
+
 		
 	struct FOSMNodeInfo
 	{
@@ -157,17 +63,27 @@ public:
 		TArray<FOSMWayRef> WayRefs;
 	};
 		
-		
+
 	struct FOSMWayInfo
 	{
 		FString Name;
 		FString Ref;
+		
 		TArray<FOSMNodeInfo*> Nodes;
 		EOSMWayType WayType;
+		/** subtype according to WayType */
+		FString Category;
+
+		///
+		/// BUILDING
+		///
 		double Height;
 		int32 BuildingLevels;
 
-		// If true, way is only traversable in the order the nodes are listed in the Nodes list
+		///
+		/// HIGHWAY
+		///
+		/** If true, way is only traversable in the order the nodes are listed in the Nodes list */
 		uint8 bIsOneWay : 1;
 	};
 
@@ -182,7 +98,7 @@ public:
 	double AverageLongitude = 0.0;
 
 	FSpatialReferenceSystem SpatialReferenceSystem;
-		
+
 	// All ways we've parsed
 	TArray<FOSMWayInfo*> Ways;
 		

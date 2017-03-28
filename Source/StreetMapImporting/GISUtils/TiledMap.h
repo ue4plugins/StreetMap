@@ -24,6 +24,8 @@ public:
 	
 	static FTiledMap MapzenElevation()
 	{
+		// Mapzen, U.S. Geological Survey, and U.S. National Oceanic and Atmospheric Administration
+		// see details: https://aws.amazon.com/de/public-datasets/terrain/
 		FTiledMap TiledMap;
 		TiledMap.TileWidth = 256;
 		TiledMap.TileHeight = 256;

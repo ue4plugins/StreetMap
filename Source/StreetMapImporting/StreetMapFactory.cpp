@@ -4,7 +4,6 @@
 #include "StreetMapFactory.h"
 #include "OSMFile.h"
 #include "StreetMap.h"
-#include "GISUtils/SpatialReferenceSystem.h"
 
 
 UStreetMapFactory::UStreetMapFactory(const FObjectInitializer& ObjectInitializer)
@@ -59,112 +58,106 @@ bool UStreetMapFactory::LoadFromOpenStreetMapXMLFile( UStreetMap* StreetMap, FSt
 		int32& OutRoadIndex ) -> bool
 	{
 		EStreetMapRoadType RoadType = EStreetMapRoadType::Other;
-		switch( OSMWay.WayType )
+		if ((OSMWay.Category == TEXT("residential")) || // ~32% of all highways
+			(OSMWay.Category == TEXT("service")) ||		// ~15% of all highways
+			(OSMWay.Category == TEXT("unclassified")) ||
+			(OSMWay.Category == TEXT("road"))) // @todo: Consider excluding "Road" from our data set, as it could be a highway that wasn't properly tagged in OSM yet
+			RoadType = EStreetMapRoadType::Street;
+		else if (
+			(OSMWay.Category == TEXT("tertiary")) ||	// ~4% of all highways
+			(OSMWay.Category == TEXT("secondary")) ||	// ~2% of all highways
+			(OSMWay.Category == TEXT("secondary_link")) ||
+			(OSMWay.Category == TEXT("tertiary_link")))
+			RoadType = EStreetMapRoadType::MajorRoad;
+		else if( 
+			(OSMWay.Category == TEXT("primary")) || // ~2% of all highways
+			(OSMWay.Category == TEXT("primary_link")) ||
+			(OSMWay.Category == TEXT("motorway")) ||
+			(OSMWay.Category == TEXT("motorway_link")) ||
+			(OSMWay.Category == TEXT("trunk")) ||
+			(OSMWay.Category == TEXT("trunk_link")))
+			RoadType = EStreetMapRoadType::Highway;
+
+		if (RoadType == EStreetMapRoadType::Other)
 		{
-			case FOSMFile::EOSMWayType::Motorway:
-			case FOSMFile::EOSMWayType::Motorway_Link:
-			case FOSMFile::EOSMWayType::Trunk:
-			case FOSMFile::EOSMWayType::Trunk_Link:
-			case FOSMFile::EOSMWayType::Primary:
-			case FOSMFile::EOSMWayType::Primary_Link:
-				RoadType = EStreetMapRoadType::Highway;
-				break;
-
-			case FOSMFile::EOSMWayType::Secondary:
-			case FOSMFile::EOSMWayType::Secondary_Link:
-			case FOSMFile::EOSMWayType::Tertiary:
-			case FOSMFile::EOSMWayType::Tertiary_Link:
-				RoadType = EStreetMapRoadType::MajorRoad;
-				break;
-
-			case FOSMFile::EOSMWayType::Residential:
-			case FOSMFile::EOSMWayType::Service:
-			case FOSMFile::EOSMWayType::Unclassified:
-			case FOSMFile::EOSMWayType::Road:	// @todo: Consider excluding "Road" from our data set, as it could be a highway that wasn't properly tagged in OSM yet
-				RoadType = EStreetMapRoadType::Street;
-				break;
+			// There are other types that we don't recognize yet.  See http://wiki.openstreetmap.org/wiki/Key:highway
+			return false;
 		}
 
-		if( RoadType != EStreetMapRoadType::Other )
+		// Require at least two points!
+		if (OSMWay.Nodes.Num() < 2)
 		{
-			// Require at least two points!
-			if( OSMWay.Nodes.Num() > 1 )
-			{
-				// Create a road for this way
-				OutRoadIndex = StreetMapRef.Roads.Num();
-				FStreetMapRoad& NewRoad = *new( StreetMapRef.Roads )FStreetMapRoad();
-
-				FVector2D BoundsMin( TNumericLimits<float>::Max(), TNumericLimits<float>::Max() );
-				FVector2D BoundsMax( TNumericLimits<float>::Lowest(), TNumericLimits<float>::Lowest() );
-
-				NewRoad.RoadPoints.AddUninitialized( OSMWay.Nodes.Num() );
-				int32 CurRoadPoint = 0;
-
-				// Set defaults for each node index on this road.  INDEX_NONE means the node is not valid, which may be the case
-				// for nodes that we filter out entirely.  This will be filled in by valid indices to nodes later on.
-				NewRoad.NodeIndices.AddUninitialized( OSMWay.Nodes.Num() );
-				for( int32& NodeIndex : NewRoad.NodeIndices )
-				{
-					NodeIndex = INDEX_NONE;
-				}
-
-
-				for( const FOSMFile::FOSMNodeInfo* OSMNodePtr : OSMWay.Nodes )
-				{
-					const FOSMFile::FOSMNodeInfo& OSMNode = *OSMNodePtr;
-					const FVector2D NodePos = OSMFile.SpatialReferenceSystem.FromEPSG4326(OSMNode.Longitude, OSMNode.Latitude) * OSMToCentimetersScaleFactor;
-
-					// Update bounding box
-					{
-						if( NodePos.X < BoundsMin.X )
-						{
-							BoundsMin.X = NodePos.X;
-						}
-						if( NodePos.Y < BoundsMin.Y )
-						{
-							BoundsMin.Y = NodePos.Y;
-						}
-						if( NodePos.X > BoundsMax.X )
-						{
-							BoundsMax.X = NodePos.X;
-						}
-						if( NodePos.Y > BoundsMax.Y )
-						{
-							BoundsMax.Y = NodePos.Y;
-						}
-					}
-
-					// Fill in the points
-					NewRoad.RoadPoints[ CurRoadPoint++ ] = NodePos;
-				}
-
-
-				NewRoad.RoadName = OSMWay.Name;
-				if( NewRoad.RoadName.IsEmpty() )
-				{
-					NewRoad.RoadName = OSMWay.Ref;
-				}
-				NewRoad.RoadType = RoadType;
-				NewRoad.BoundsMin = BoundsMin;
-				NewRoad.BoundsMax = BoundsMax;
-
-				NewRoad.bIsOneWay = OSMWay.bIsOneWay;
-
-				StreetMapRef.BoundsMin.X = FMath::Min( StreetMapRef.BoundsMin.X, BoundsMin.X );
-				StreetMapRef.BoundsMin.Y = FMath::Min( StreetMapRef.BoundsMin.Y, BoundsMin.Y );
-				StreetMapRef.BoundsMax.X = FMath::Max( StreetMapRef.BoundsMax.X, BoundsMax.X );
-				StreetMapRef.BoundsMax.Y = FMath::Max( StreetMapRef.BoundsMax.Y, BoundsMax.Y );
-
-				return true;
-			}
-			else
-			{
-				// NOTE: Skipped adding road for way because it has less than 2 points
-				// @todo: Log this for the user as an import warning
-			}
+			// NOTE: Skipped adding road for way because it has less than 2 points
+			// @todo: Log this for the user as an import warning
+			return false;
 		}
 
-		return false;
+		// Create a road for this way
+		OutRoadIndex = StreetMapRef.Roads.Num();
+		FStreetMapRoad& NewRoad = *new( StreetMapRef.Roads )FStreetMapRoad();
+
+		FVector2D BoundsMin( TNumericLimits<float>::Max(), TNumericLimits<float>::Max() );
+		FVector2D BoundsMax( TNumericLimits<float>::Lowest(), TNumericLimits<float>::Lowest() );
+
+		NewRoad.RoadPoints.AddUninitialized( OSMWay.Nodes.Num() );
+		int32 CurRoadPoint = 0;
+
+		// Set defaults for each node index on this road.  INDEX_NONE means the node is not valid, which may be the case
+		// for nodes that we filter out entirely.  This will be filled in by valid indices to nodes later on.
+		NewRoad.NodeIndices.AddUninitialized( OSMWay.Nodes.Num() );
+		for( int32& NodeIndex : NewRoad.NodeIndices )
+		{
+			NodeIndex = INDEX_NONE;
+		}
+
+
+		for( const FOSMFile::FOSMNodeInfo* OSMNodePtr : OSMWay.Nodes )
+		{
+			const FOSMFile::FOSMNodeInfo& OSMNode = *OSMNodePtr;
+			const FVector2D NodePos = OSMFile.SpatialReferenceSystem.FromEPSG4326(OSMNode.Longitude, OSMNode.Latitude) * OSMToCentimetersScaleFactor;
+
+			// Update bounding box
+			{
+				if( NodePos.X < BoundsMin.X )
+				{
+					BoundsMin.X = NodePos.X;
+				}
+				if( NodePos.Y < BoundsMin.Y )
+				{
+					BoundsMin.Y = NodePos.Y;
+				}
+				if( NodePos.X > BoundsMax.X )
+				{
+					BoundsMax.X = NodePos.X;
+				}
+				if( NodePos.Y > BoundsMax.Y )
+				{
+					BoundsMax.Y = NodePos.Y;
+				}
+			}
+
+			// Fill in the points
+			NewRoad.RoadPoints[ CurRoadPoint++ ] = NodePos;
+		}
+
+
+		NewRoad.RoadName = OSMWay.Name;
+		if( NewRoad.RoadName.IsEmpty() )
+		{
+			NewRoad.RoadName = OSMWay.Ref;
+		}
+		NewRoad.RoadType = RoadType;
+		NewRoad.BoundsMin = BoundsMin;
+		NewRoad.BoundsMax = BoundsMax;
+
+		NewRoad.bIsOneWay = OSMWay.bIsOneWay;
+
+		StreetMapRef.BoundsMin.X = FMath::Min( StreetMapRef.BoundsMin.X, BoundsMin.X );
+		StreetMapRef.BoundsMin.Y = FMath::Min( StreetMapRef.BoundsMin.Y, BoundsMin.Y );
+		StreetMapRef.BoundsMax.X = FMath::Max( StreetMapRef.BoundsMax.X, BoundsMax.X );
+		StreetMapRef.BoundsMax.Y = FMath::Max( StreetMapRef.BoundsMax.Y, BoundsMax.Y );
+
+		return true;
 	};
 
 
@@ -295,13 +288,20 @@ bool UStreetMapFactory::LoadFromOpenStreetMapXMLFile( UStreetMap* StreetMap, FSt
 				// ...
 			}
 		}
-		else
+		else if( OSMWay->WayType == FOSMFile::EOSMWayType::Highway )
 		{
 			int32 RoadIndex = INDEX_NONE;
 			if( AddRoadForWay( OSMFile, *StreetMap, *OSMWay, RoadIndex ) )
 			{
 				OSMWayToRoadIndexMap.Add( OSMWay, RoadIndex );
 			}
+		}
+		else
+		{
+			/*if (AddMiscWay(OSMFile, *StreetMap, *OSMWay))
+			{
+				// ...
+			}*/
 		}
 	}
 

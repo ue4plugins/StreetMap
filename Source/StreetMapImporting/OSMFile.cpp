@@ -212,131 +212,16 @@ bool FOSMFile::ProcessAttribute( const TCHAR* AttributeName, const TCHAR* Attrib
 			}
 			else if( !FCString::Stricmp( CurrentWayTagKey, TEXT( "highway" ) ) )
 			{
-				EOSMWayType WayType = EOSMWayType::Other;
-						
-				if( !FCString::Stricmp( AttributeValue, TEXT( "motorway" ) ) )
-				{
-					WayType = EOSMWayType::Motorway;
-				}
-				else if( !FCString::Stricmp( AttributeValue, TEXT( "motorway_link" ) ) )
-				{
-					WayType = EOSMWayType::Motorway_Link;
-				}
-				else if( !FCString::Stricmp( AttributeValue, TEXT( "trunk" ) ) )
-				{
-					WayType = EOSMWayType::Trunk;
-				}
-				else if( !FCString::Stricmp( AttributeValue, TEXT( "trunk_link" ) ) )
-				{
-					WayType = EOSMWayType::Trunk_Link;
-				}
-				else if( !FCString::Stricmp( AttributeValue, TEXT( "primary" ) ) )
-				{
-					WayType = EOSMWayType::Primary;
-				}
-				else if( !FCString::Stricmp( AttributeValue, TEXT( "primary_link" ) ) )
-				{
-					WayType = EOSMWayType::Primary_Link;
-				}
-				else if( !FCString::Stricmp( AttributeValue, TEXT( "secondary" ) ) )
-				{
-					WayType = EOSMWayType::Secondary;
-				}
-				else if( !FCString::Stricmp( AttributeValue, TEXT( "secondary_link" ) ) )
-				{
-					WayType = EOSMWayType::Secondary_Link;
-				}
-				else if( !FCString::Stricmp( AttributeValue, TEXT( "tertiary" ) ) )
-				{
-					WayType = EOSMWayType::Tertiary;
-				}
-				else if( !FCString::Stricmp( AttributeValue, TEXT( "tertiary_link" ) ) )
-				{
-					WayType = EOSMWayType::Tertiary_Link;
-				}
-				else if( !FCString::Stricmp( AttributeValue, TEXT( "residential" ) ) )
-				{
-					WayType = EOSMWayType::Residential;
-				}
-				else if( !FCString::Stricmp( AttributeValue, TEXT( "service" ) ) )
-				{
-					WayType = EOSMWayType::Service;
-				}
-				else if( !FCString::Stricmp( AttributeValue, TEXT( "unclassified" ) ) )
-				{
-					WayType = EOSMWayType::Unclassified;
-				}
-				else if( !FCString::Stricmp( AttributeValue, TEXT( "living_street" ) ) )
-				{
-					WayType = EOSMWayType::Living_Street;
-				}
-				else if( !FCString::Stricmp( AttributeValue, TEXT( "pedestrian" ) ) )
-				{
-					WayType = EOSMWayType::Pedestrian;
-				}
-				else if( !FCString::Stricmp( AttributeValue, TEXT( "track" ) ) )
-				{
-					WayType = EOSMWayType::Track;
-				}
-				else if( !FCString::Stricmp( AttributeValue, TEXT( "bus_guideway" ) ) )
-				{
-					WayType = EOSMWayType::Bus_Guideway;
-				}
-				else if( !FCString::Stricmp( AttributeValue, TEXT( "raceway" ) ) )
-				{
-					WayType = EOSMWayType::Raceway;
-				}
-				else if( !FCString::Stricmp( AttributeValue, TEXT( "road" ) ) )
-				{
-					WayType = EOSMWayType::Road;
-				}
-				else if( !FCString::Stricmp( AttributeValue, TEXT( "footway" ) ) )
-				{
-					WayType = EOSMWayType::Footway;
-				}
-				else if( !FCString::Stricmp( AttributeValue, TEXT( "cycleway" ) ) )
-				{
-					WayType = EOSMWayType::Cycleway;
-				}
-				else if( !FCString::Stricmp( AttributeValue, TEXT( "bridleway" ) ) )
-				{
-					WayType = EOSMWayType::Bridleway;
-				}
-				else if( !FCString::Stricmp( AttributeValue, TEXT( "steps" ) ) )
-				{
-					WayType = EOSMWayType::Steps;
-				}
-				else if( !FCString::Stricmp( AttributeValue, TEXT( "path" ) ) )
-				{
-					WayType = EOSMWayType::Path;
-				}
-				else if( !FCString::Stricmp( AttributeValue, TEXT( "proposed" ) ) )
-				{
-					WayType = EOSMWayType::Proposed;
-				}
-				else if( !FCString::Stricmp( AttributeValue, TEXT( "construction" ) ) )
-				{
-					WayType = EOSMWayType::Construction;
-				}
-				else
-				{
-					// Other type that we don't recognize yet.  See http://wiki.openstreetmap.org/wiki/Key:highway
-				}
-						
-						
-				CurrentWayInfo->WayType = WayType;
+				CurrentWayInfo->WayType = EOSMWayType::Highway;
+				CurrentWayInfo->Category = AttributeValue;
 			}
 			else if( !FCString::Stricmp( CurrentWayTagKey, TEXT( "building" ) ) )
 			{
 				CurrentWayInfo->WayType = EOSMWayType::Building;
 
-				if( !FCString::Stricmp( AttributeValue, TEXT( "yes" ) ) )
+				if( FCString::Stricmp( AttributeValue, TEXT( "yes" ) ) )
 				{
-					CurrentWayInfo->WayType = EOSMWayType::Building;
-				}
-				else
-				{
-					// Other type that we don't recognize yet.  See http://wiki.openstreetmap.org/wiki/Key:building
+					CurrentWayInfo->Category = AttributeValue;
 				}
 			}
 			else if( !FCString::Stricmp( CurrentWayTagKey, TEXT( "height" ) ) )
@@ -369,6 +254,21 @@ bool FOSMFile::ProcessAttribute( const TCHAR* AttributeName, const TCHAR* Attrib
 				{
 					CurrentWayInfo->bIsOneWay = false;
 				}
+			}
+			else if (!FCString::Stricmp(CurrentWayTagKey, TEXT("leisure")))
+			{
+				CurrentWayInfo->WayType = EOSMWayType::Leisure;
+				CurrentWayInfo->Category = AttributeValue;
+			}
+			else if (!FCString::Stricmp(CurrentWayTagKey, TEXT("natural")))
+			{
+				CurrentWayInfo->WayType = EOSMWayType::Natural;
+				CurrentWayInfo->Category = AttributeValue;
+			}
+			else if (!FCString::Stricmp(CurrentWayTagKey, TEXT("landuse")))
+			{
+				CurrentWayInfo->WayType = EOSMWayType::LandUse;
+				CurrentWayInfo->Category = AttributeValue;
 			}
 		}
 	}
