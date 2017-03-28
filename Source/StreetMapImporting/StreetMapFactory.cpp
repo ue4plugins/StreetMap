@@ -167,90 +167,162 @@ bool UStreetMapFactory::LoadFromOpenStreetMapXMLFile( UStreetMap* StreetMap, FSt
 		UStreetMap& StreetMapRef, 
 		const FOSMFile::FOSMWayInfo& OSMWay ) -> bool
 	{
-		if( OSMWay.WayType == FOSMFile::EOSMWayType::Building )
+		// Require at least three points so that we don't have degenerate polygon!
+		if (OSMWay.Nodes.Num() < 3)
 		{
-			// Require at least three points so that we don't have degenerate polygon!
-			if( OSMWay.Nodes.Num() > 2 )
-			{
-				// Create a building for this way
-				FStreetMapBuilding& NewBuilding = *new( StreetMapRef.Buildings )FStreetMapBuilding();
-
-				FVector2D BoundsMin( TNumericLimits<float>::Max(), TNumericLimits<float>::Max() );
-				FVector2D BoundsMax( TNumericLimits<float>::Lowest(), TNumericLimits<float>::Lowest() );
-
-				NewBuilding.BuildingPoints.AddUninitialized( OSMWay.Nodes.Num() );
-				int32 CurBuildingPoint = 0;
-
-				for( const FOSMFile::FOSMNodeInfo* OSMNodePtr : OSMWay.Nodes )
-				{
-					const FOSMFile::FOSMNodeInfo& OSMNode = *OSMNodePtr;
-					const FVector2D NodePos = OSMFile.SpatialReferenceSystem.FromEPSG4326(OSMNode.Longitude, OSMNode.Latitude) * OSMToCentimetersScaleFactor;
-
-					// Update bounding box
-					{
-						if( NodePos.X < BoundsMin.X )
-						{
-							BoundsMin.X = NodePos.X;
-						}
-						if( NodePos.Y < BoundsMin.Y )
-						{
-							BoundsMin.Y = NodePos.Y;
-						}
-						if( NodePos.X > BoundsMax.X )
-						{
-							BoundsMax.X = NodePos.X;
-						}
-						if( NodePos.Y > BoundsMax.Y )
-						{
-							BoundsMax.Y = NodePos.Y;
-						}
-					}
-
-					// Fill in the points
-					NewBuilding.BuildingPoints[ CurBuildingPoint++ ] = NodePos;
-				}
-
-				// Make sure the building ended up with a closed polygon, then remove the final (redundant) point
-				const bool bIsClosed = NewBuilding.BuildingPoints[ 0 ].Equals( NewBuilding.BuildingPoints[ NewBuilding.BuildingPoints.Num() - 1 ], KINDA_SMALL_NUMBER );
-				if( bIsClosed )
-				{
-					// Remove the final redundant point
-					NewBuilding.BuildingPoints.Pop();
-				}
-				else
-				{
-					// Wasn't expecting to have an unclosed shape.  Our tolerances might be off, or the data was malformed.
-					// Either way, it shouldn't be a problem as we'll close the shape ourselves below.
-					// @todo: Log this for the user as an import warning
-				}
-
-				NewBuilding.BuildingName = OSMWay.Name;
-				if( NewBuilding.BuildingName.IsEmpty() )
-				{
-					NewBuilding.BuildingName = OSMWay.Ref;
-				}
-
-				NewBuilding.Height = OSMWay.Height * OSMToCentimetersScaleFactor;
-				NewBuilding.BuildingLevels = OSMWay.BuildingLevels;
-
-				NewBuilding.BoundsMin = BoundsMin;
-				NewBuilding.BoundsMax = BoundsMax;
-
-				StreetMapRef.BoundsMin.X = FMath::Min( StreetMapRef.BoundsMin.X, BoundsMin.X );
-				StreetMapRef.BoundsMin.Y = FMath::Min( StreetMapRef.BoundsMin.Y, BoundsMin.Y );
-				StreetMapRef.BoundsMax.X = FMath::Max( StreetMapRef.BoundsMax.X, BoundsMax.X );
-				StreetMapRef.BoundsMax.Y = FMath::Max( StreetMapRef.BoundsMax.Y, BoundsMax.Y );
-
-				return true;
-			}
-			else
-			{
-				// NOTE: Skipped adding building for way because it has less than 3 points
-				// @todo: Log this for the user as an import warning
-			}
+			// NOTE: Skipped adding building for way because it has less than 3 points
+			// @todo: Log this for the user as an import warning
+			return false;
 		}
 
-		return false;
+		// Create a building for this way
+		FStreetMapBuilding& NewBuilding = *new( StreetMapRef.Buildings )FStreetMapBuilding();
+
+		FVector2D BoundsMin( TNumericLimits<float>::Max(), TNumericLimits<float>::Max() );
+		FVector2D BoundsMax( TNumericLimits<float>::Lowest(), TNumericLimits<float>::Lowest() );
+
+		NewBuilding.BuildingPoints.AddUninitialized( OSMWay.Nodes.Num() );
+		int32 CurBuildingPoint = 0;
+
+		for( const FOSMFile::FOSMNodeInfo* OSMNodePtr : OSMWay.Nodes )
+		{
+			const FOSMFile::FOSMNodeInfo& OSMNode = *OSMNodePtr;
+			const FVector2D NodePos = OSMFile.SpatialReferenceSystem.FromEPSG4326(OSMNode.Longitude, OSMNode.Latitude) * OSMToCentimetersScaleFactor;
+
+			// Update bounding box
+			{
+				if( NodePos.X < BoundsMin.X )
+				{
+					BoundsMin.X = NodePos.X;
+				}
+				if( NodePos.Y < BoundsMin.Y )
+				{
+					BoundsMin.Y = NodePos.Y;
+				}
+				if( NodePos.X > BoundsMax.X )
+				{
+					BoundsMax.X = NodePos.X;
+				}
+				if( NodePos.Y > BoundsMax.Y )
+				{
+					BoundsMax.Y = NodePos.Y;
+				}
+			}
+
+			// Fill in the points
+			NewBuilding.BuildingPoints[ CurBuildingPoint++ ] = NodePos;
+		}
+
+		// Make sure the building ended up with a closed polygon, then remove the final (redundant) point
+		const bool bIsClosed = NewBuilding.BuildingPoints[ 0 ].Equals( NewBuilding.BuildingPoints[ NewBuilding.BuildingPoints.Num() - 1 ], KINDA_SMALL_NUMBER );
+		if( bIsClosed )
+		{
+			// Remove the final redundant point
+			NewBuilding.BuildingPoints.Pop();
+		}
+		else
+		{
+			// Wasn't expecting to have an unclosed shape.  Our tolerances might be off, or the data was malformed.
+			// Either way, it shouldn't be a problem as we'll close the shape ourselves below.
+			// @todo: Log this for the user as an import warning
+		}
+
+		NewBuilding.BuildingName = OSMWay.Name;
+		if( NewBuilding.BuildingName.IsEmpty() )
+		{
+			NewBuilding.BuildingName = OSMWay.Ref;
+		}
+
+		NewBuilding.Height = OSMWay.Height * OSMToCentimetersScaleFactor;
+		NewBuilding.BuildingLevels = OSMWay.BuildingLevels;
+
+		NewBuilding.BoundsMin = BoundsMin;
+		NewBuilding.BoundsMax = BoundsMax;
+
+		StreetMapRef.BoundsMin.X = FMath::Min( StreetMapRef.BoundsMin.X, BoundsMin.X );
+		StreetMapRef.BoundsMin.Y = FMath::Min( StreetMapRef.BoundsMin.Y, BoundsMin.Y );
+		StreetMapRef.BoundsMax.X = FMath::Max( StreetMapRef.BoundsMax.X, BoundsMax.X );
+		StreetMapRef.BoundsMax.Y = FMath::Max( StreetMapRef.BoundsMax.Y, BoundsMax.Y );
+
+		return true;
+	};
+
+	// Adds a remaining recognized ways to the street map using the OpenStreetMap data
+	auto AddMiscWay = [OSMToCentimetersScaleFactor](
+		const FOSMFile& OSMFile,
+		UStreetMap& StreetMapRef,
+		const FOSMFile::FOSMWayInfo& OSMWay) -> bool
+	{
+		if (OSMWay.WayType == FOSMFile::EOSMWayType::Other)
+		{
+			return false;
+		}
+
+		// Create a MiscWay for this way
+		FStreetMapMiscWay& NewMiscWay = *new(StreetMapRef.MiscWays)FStreetMapMiscWay();
+
+		FVector2D BoundsMin(TNumericLimits<float>::Max(), TNumericLimits<float>::Max());
+		FVector2D BoundsMax(TNumericLimits<float>::Lowest(), TNumericLimits<float>::Lowest());
+
+		NewMiscWay.Points.AddUninitialized(OSMWay.Nodes.Num());
+		int32 CurBuildingPoint = 0;
+
+		for (const FOSMFile::FOSMNodeInfo* OSMNodePtr : OSMWay.Nodes)
+		{
+			const FOSMFile::FOSMNodeInfo& OSMNode = *OSMNodePtr;
+			const FVector2D NodePos = OSMFile.SpatialReferenceSystem.FromEPSG4326(OSMNode.Longitude, OSMNode.Latitude) * OSMToCentimetersScaleFactor;
+
+			// Update bounding box
+			{
+				if (NodePos.X < BoundsMin.X)
+				{
+					BoundsMin.X = NodePos.X;
+				}
+				if (NodePos.Y < BoundsMin.Y)
+				{
+					BoundsMin.Y = NodePos.Y;
+				}
+				if (NodePos.X > BoundsMax.X)
+				{
+					BoundsMax.X = NodePos.X;
+				}
+				if (NodePos.Y > BoundsMax.Y)
+				{
+					BoundsMax.Y = NodePos.Y;
+				}
+			}
+
+			// Fill in the points
+			NewMiscWay.Points[CurBuildingPoint++] = NodePos;
+		}
+
+		// Test if the building ended up with a closed polygon, then remove the final (redundant) point
+		const bool bIsClosed = NewMiscWay.Points[0].Equals(NewMiscWay.Points[NewMiscWay.Points.Num() - 1], KINDA_SMALL_NUMBER);
+		if (bIsClosed)
+		{
+			// Remove the final redundant point
+			NewMiscWay.Points.Pop();
+		}
+		else
+		{
+			// Unclosed shapes are total fine since (e.g. tree_row)
+		}
+
+		NewMiscWay.Name = OSMWay.Name;
+		if (NewMiscWay.Name.IsEmpty())
+		{
+			NewMiscWay.Name = OSMWay.Ref;
+		}
+
+		NewMiscWay.BoundsMin = BoundsMin;
+		NewMiscWay.BoundsMax = BoundsMax;
+
+		StreetMapRef.BoundsMin.X = FMath::Min(StreetMapRef.BoundsMin.X, BoundsMin.X);
+		StreetMapRef.BoundsMin.Y = FMath::Min(StreetMapRef.BoundsMin.Y, BoundsMin.Y);
+		StreetMapRef.BoundsMax.X = FMath::Max(StreetMapRef.BoundsMax.X, BoundsMax.X);
+		StreetMapRef.BoundsMax.Y = FMath::Max(StreetMapRef.BoundsMax.Y, BoundsMax.Y);
+
+		return true;
 	};
 
 
@@ -296,12 +368,9 @@ bool UStreetMapFactory::LoadFromOpenStreetMapXMLFile( UStreetMap* StreetMap, FSt
 				OSMWayToRoadIndexMap.Add( OSMWay, RoadIndex );
 			}
 		}
-		else
+		else if (AddMiscWay(OSMFile, *StreetMap, *OSMWay))
 		{
-			/*if (AddMiscWay(OSMFile, *StreetMap, *OSMWay))
-			{
-				// ...
-			}*/
+			// ...
 		}
 	}
 

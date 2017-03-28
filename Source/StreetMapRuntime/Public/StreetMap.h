@@ -334,6 +334,31 @@ struct STREETMAPRUNTIME_API FStreetMapBuilding
 };
 
 
+/** A miscellaneous way */
+USTRUCT(BlueprintType)
+struct STREETMAPRUNTIME_API FStreetMapMiscWay
+{
+	GENERATED_USTRUCT_BODY()
+
+	/** Name of the way */
+	UPROPERTY(Category = StreetMap, EditAnywhere)
+	FString Name;
+
+	/** Polygon points that define the perimeter of the way */
+	UPROPERTY(Category = StreetMap, EditAnywhere)
+	TArray<FVector2D> Points;
+
+	// @todo: Performance: Bounding information could be computed at load time if we want to avoid the memory cost of storing it
+
+	/** 2D bounds (min) of this way's points */
+	UPROPERTY(Category = StreetMap, EditAnywhere)
+		FVector2D BoundsMin;
+
+	/** 2D bounds (max) of this way's points */
+	UPROPERTY(Category = StreetMap, EditAnywhere)
+		FVector2D BoundsMax;
+};
+
 /** A loaded street map */
 UCLASS()
 class STREETMAPRUNTIME_API UStreetMap : public UObject
@@ -384,6 +409,19 @@ public:
 		return Buildings;
 	}
 
+	/** Gets all of the miscellaneous ways (read only) */
+	const TArray<FStreetMapMiscWay>& GetMiscWays() const
+	{
+		return MiscWays;
+	}
+
+	/** Gets all of the miscellaneous ways */
+	TArray<FStreetMapMiscWay>& GetMiscWays()
+	{
+		return MiscWays;
+	}
+
+
 	/** Gets the bounding box of the map */
 	FVector2D GetBoundsMin() const
 	{
@@ -416,6 +454,10 @@ protected:
 	/** List of all buildings on the street map */
 	UPROPERTY( Category=StreetMap, VisibleAnywhere)
 	TArray<FStreetMapBuilding> Buildings;
+
+	/** List of all miscellaneous ways on the street map */
+	UPROPERTY(Category = StreetMap, VisibleAnywhere)
+	TArray<FStreetMapMiscWay> MiscWays;
 
 	/** 2D bounds (min) of this map's roads and buildings */
 	UPROPERTY( Category=StreetMap, VisibleAnywhere)

@@ -255,20 +255,24 @@ bool FOSMFile::ProcessAttribute( const TCHAR* AttributeName, const TCHAR* Attrib
 					CurrentWayInfo->bIsOneWay = false;
 				}
 			}
-			else if (!FCString::Stricmp(CurrentWayTagKey, TEXT("leisure")))
+			else if(CurrentWayInfo->WayType == EOSMWayType::Other)
 			{
-				CurrentWayInfo->WayType = EOSMWayType::Leisure;
-				CurrentWayInfo->Category = AttributeValue;
-			}
-			else if (!FCString::Stricmp(CurrentWayTagKey, TEXT("natural")))
-			{
-				CurrentWayInfo->WayType = EOSMWayType::Natural;
-				CurrentWayInfo->Category = AttributeValue;
-			}
-			else if (!FCString::Stricmp(CurrentWayTagKey, TEXT("landuse")))
-			{
-				CurrentWayInfo->WayType = EOSMWayType::LandUse;
-				CurrentWayInfo->Category = AttributeValue;
+				// if this way was not already marked as building or highway, try other types as well
+				if (!FCString::Stricmp(CurrentWayTagKey, TEXT("leisure")))
+				{
+					CurrentWayInfo->WayType = EOSMWayType::Leisure;
+					CurrentWayInfo->Category = AttributeValue;
+				}
+				else if (!FCString::Stricmp(CurrentWayTagKey, TEXT("natural")))
+				{
+					CurrentWayInfo->WayType = EOSMWayType::Natural;
+					CurrentWayInfo->Category = AttributeValue;
+				}
+				else if (!FCString::Stricmp(CurrentWayTagKey, TEXT("landuse")))
+				{
+					CurrentWayInfo->WayType = EOSMWayType::LandUse;
+					CurrentWayInfo->Category = AttributeValue;
+				}
 			}
 		}
 	}

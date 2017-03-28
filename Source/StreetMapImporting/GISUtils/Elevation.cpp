@@ -487,11 +487,14 @@ private:
 };
 
 
-ALandscape* CreateLandscape(UWorld* World, const FStreetMapLandscapeBuildSettings& BuildSettings, const FTransform& Transform, const TArray<uint16>& ElevationData, FScopedSlowTask& SlowTask)
+ALandscape* CreateLandscape(UStreetMapComponent* StreetMapComponent, const FStreetMapLandscapeBuildSettings& BuildSettings, const FTransform& Transform, const TArray<uint16>& ElevationData, FScopedSlowTask& SlowTask)
 {
 	SlowTask.EnterProgressFrame(0.25f, LOCTEXT("CreatingLandscape", "Filling Landscape with data"));
 
 	FScopedTransaction Transaction(LOCTEXT("Undo", "Creating New Landscape"));
+
+	UWorld* World = StreetMapComponent->GetOwner()->GetWorld();
+	UStreetMap* StreetMap = StreetMapComponent->GetStreetMap();
 
 	ALandscape* Landscape = World->SpawnActor<ALandscape>(ALandscape::StaticClass(), Transform);
 
@@ -586,6 +589,5 @@ ALandscape* BuildLandscape(UStreetMapComponent* StreetMapComponent, const FStree
 	TArray<uint16> ElevationData;
 	ElevationModel.ReprojectData(StreetMapComponent, BuildSettings, SlowTask, ElevationData);
 
-	UWorld* World = StreetMapComponent->GetOwner()->GetWorld();
-	return CreateLandscape(World, BuildSettings, ElevationModel.GetTransform(), ElevationData, SlowTask);
+	return CreateLandscape(StreetMapComponent, BuildSettings, ElevationModel.GetTransform(), ElevationData, SlowTask);
 }
