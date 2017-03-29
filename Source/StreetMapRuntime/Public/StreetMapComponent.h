@@ -127,8 +127,6 @@ public:
 	/** Rebuilds the graphics and physics mesh representation if we don't have one right now.  Designed to be called on demand. */
 	void BuildMesh();
 
-
-
 protected:
 
 	/** Giving a default material to the mesh if no valid material is already assigned or materials array is empty. */
@@ -159,10 +157,14 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "StreetMap")
 		FStreetMapCollisionSettings CollisionSettings;
 
+	UPROPERTY(EditAnywhere, Category = "Landscape")
+		FStreetMapLandscapeBuildSettings LandscapeSettings;
+
 	//** Physics data for mesh collision. */
 	UPROPERTY(Transient)
 		UBodySetup* StreetMapBodySetup;
 
+	friend class FStreetMapComponentDetails;
 
 protected:
 	//

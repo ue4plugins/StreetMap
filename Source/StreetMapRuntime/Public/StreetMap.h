@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include "LandscapeProxy.h"
 #include "StreetMap.generated.h"
 
 
@@ -118,6 +119,36 @@ public:
 };
 
 
+/** Landscape generation settings */
+USTRUCT(BlueprintType)
+struct STREETMAPRUNTIME_API FStreetMapLandscapeBuildSettings
+{
+	GENERATED_USTRUCT_BODY()
+
+public:
+	// Horizontal distance between elevation data points in meters. Keep in mind that elevation data is usually available in 10-30 meter resolution. Anything in between will be interpolated.
+	UPROPERTY(Category = "Landscape", EditAnywhere, meta = (UIMin = 1, ClampMin = 0.25f, ClampMax = 100.0f))
+		float QuadSize;
+
+	// Minimal size of the Landscape in each direction around the center of the OpenStreetMap in meters.
+	UPROPERTY(Category = "Landscape", EditAnywhere, meta = (UIMin = 1, ClampMin = 256, ClampMax = 16384))
+		int32 Radius;
+
+	// Material initially applied to the landscape. Setting a material here exposes properties for setting up layer info based on the landscape blend nodes in the material.
+	UPROPERTY(Category = "Landscape", EditAnywhere, meta = (DisplayName = "Material", ShowForTools = "Landscape"))
+		UMaterialInterface* Material;
+
+	// The landscape layers that will be created. Only layer names referenced in the material assigned above are shown here. Modify the material to add more layers.
+	UPROPERTY(Category = "Landscape", EditAnywhere, NonTransactional, EditFixedSize, meta = (DisplayName = "Layers", ShowForTools = "Landscape"))
+		TArray<FLandscapeImportLayerInfo> Layers;
+
+	FStreetMapLandscapeBuildSettings() 
+		: QuadSize(4.0f)
+		, Radius(8192)
+		, Material(nullptr)
+	{
+	}
+};
 
 /** Types of roads */
 UENUM( BlueprintType )
@@ -303,6 +334,60 @@ struct STREETMAPRUNTIME_API FStreetMapBuilding
 };
 
 
+/** Types of miscellaneous ways */
+UENUM(BlueprintType)
+enum EStreetMapMiscWayType
+{
+	/** unknown type */
+	Unknown,
+
+	/** The leisure tag is for places people go in their spare time (e.g. parks, pitches). */
+	Leisure,
+
+	/** Used to describe natural and physical land features (e.g. wood, beach, water). */
+	Natural,
+
+	/** Used to describe the primary use of land by humans (e.g. grass, meadow, forest). */
+	LandUse,
+};
+
+/** A miscellaneous way */
+USTRUCT(BlueprintType)
+struct STREETMAPRUNTIME_API FStreetMapMiscWay
+{
+	GENERATED_USTRUCT_BODY()
+
+	/** Name of the way */
+	UPROPERTY(Category = StreetMap, EditAnywhere)
+		FString Name;
+
+	/** Category of the way */
+	UPROPERTY(Category = StreetMap, EditAnywhere)
+		FString Category;
+
+	/** points that define the the way (line or polygon) */
+	UPROPERTY(Category = StreetMap, EditAnywhere)
+		TArray<FVector2D> Points;
+
+	// @todo: Performance: Bounding information could be computed at load time if we want to avoid the memory cost of storing it
+
+	/** 2D bounds (min) of this way's points */
+	UPROPERTY(Category = StreetMap, EditAnywhere)
+		FVector2D BoundsMin;
+
+	/** 2D bounds (max) of this way's points */
+	UPROPERTY(Category = StreetMap, EditAnywhere)
+		FVector2D BoundsMax;
+
+	/** The OSM type this way is marked as */
+	UPROPERTY(Category = StreetMap, EditAnywhere)
+		TEnumAsByte<EStreetMapMiscWayType> Type;
+
+	/** Indicates whether this a closed polygon or just a line strip */
+	UPROPERTY(Category = StreetMap, EditAnywhere)
+		bool bIsClosed;
+};
+
 /** A loaded street map */
 UCLASS()
 class STREETMAPRUNTIME_API UStreetMap : public UObject
@@ -353,6 +438,19 @@ public:
 		return Buildings;
 	}
 
+	/** Gets all of the miscellaneous ways (read only) */
+	const TArray<FStreetMapMiscWay>& GetMiscWays() const
+	{
+		return MiscWays;
+	}
+
+	/** Gets all of the miscellaneous ways */
+	TArray<FStreetMapMiscWay>& GetMiscWays()
+	{
+		return MiscWays;
+	}
+
+
 	/** Gets the bounding box of the map */
 	FVector2D GetBoundsMin() const
 	{
@@ -363,6 +461,14 @@ public:
 		return BoundsMax;
 	}
 
+	double GetOriginLongitude() const
+	{
+		return OriginLongitude;
+	}
+	double GetOriginLatitude() const
+	{
+		return OriginLatitude;
+	}
 
 protected:
 	
@@ -378,6 +484,10 @@ protected:
 	UPROPERTY( Category=StreetMap, VisibleAnywhere)
 	TArray<FStreetMapBuilding> Buildings;
 
+	/** List of all miscellaneous ways on the street map */
+	UPROPERTY(Category = StreetMap, VisibleAnywhere)
+	TArray<FStreetMapMiscWay> MiscWays;
+
 	/** 2D bounds (min) of this map's roads and buildings */
 	UPROPERTY( Category=StreetMap, VisibleAnywhere)
 	FVector2D BoundsMin;
@@ -385,6 +495,13 @@ protected:
 	/** 2D bounds (max) of this map's roads and buildings */
 	UPROPERTY( Category=StreetMap, VisibleAnywhere)
 	FVector2D BoundsMax;
+
+	/** Longitude Origin of the SpatialReferenceSystem */
+	UPROPERTY(Category = StreetMap, VisibleAnywhere)
+	double OriginLongitude;
+	/** Latitude Origin of the SpatialReferenceSystem */
+	UPROPERTY(Category = StreetMap, VisibleAnywhere)
+	double OriginLatitude;
 
 #if WITH_EDITORONLY_DATA
 	/** Importing data and options used for this mesh */

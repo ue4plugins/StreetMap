@@ -22,6 +22,7 @@
 
 
 #include "StreetMapComponent.h"
+#include "GISUtils/Elevation.h"
 
 
 #define LOCTEXT_NAMESPACE "StreetMapComponentDetails"
@@ -186,6 +187,35 @@ void FStreetMapComponentDetails::CustomizeDetails(IDetailLayoutBuilder& DetailBu
 			];
 	}
 
+	// Landscape settings
+	{
+		IDetailCategoryBuilder& LandscapeCategory = DetailBuilder.EditCategory("Landscape", FText::GetEmpty(), ECategoryPriority::Important);
+		LandscapeCategory.InitiallyCollapsed(false);
+
+		const bool bCanBuildLandscape = HasValidMapObject();
+		LandscapeCategory.AddCustomRow(FText::GetEmpty(), false)
+			[
+				SAssignNew(TempHorizontalBox, SHorizontalBox)
+				+ SHorizontalBox::Slot()
+			[
+				SNew(SButton)
+				.ToolTipText(LOCTEXT("BuildLandscape_Tooltip", "Download elevation model and build a Landscape beneath the OpenStreetMap."))
+			.OnClicked(this, &FStreetMapComponentDetails::OnBuildLandscapeClicked)
+			.IsEnabled(this, &FStreetMapComponentDetails::BuildLandscapeIsEnabled)
+			.HAlign(HAlign_Center)
+			[
+				SNew(STextBlock)
+				.Text(LOCTEXT("BuildLandscape", "Build Landscape"))
+			.Font(IDetailLayoutBuilder::GetDetailFont())
+			]
+			]
+			];
+
+		TSharedRef<IPropertyHandle> PropertyHandle_Material = DetailBuilder.GetProperty("LandscapeSettings.Material");
+		PropertyHandle_Material->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FStreetMapComponentDetails::RefreshLandscapeLayersList));
+
+		RefreshLandscapeLayersList();
+	}
 }
 
 bool FStreetMapComponentDetails::HasValidMeshData() const
@@ -375,5 +405,72 @@ void FStreetMapComponentDetails::RefreshDetails()
 		LastDetailBuilderPtr->ForceRefreshDetails();
 	}
 }
+
+FReply FStreetMapComponentDetails::OnBuildLandscapeClicked()
+{
+	if (SelectedStreetMapComponent != nullptr)
+	{
+		BuildLandscape(SelectedStreetMapComponent, SelectedStreetMapComponent->LandscapeSettings);
+
+		// regenerates details panel layouts, to take in consideration new changes.
+		RefreshDetails();
+	}
+
+	return FReply::Handled();
+}
+
+bool FStreetMapComponentDetails::BuildLandscapeIsEnabled() const
+{
+	if (!SelectedStreetMapComponent || !SelectedStreetMapComponent->LandscapeSettings.Material)
+	{
+		return false;
+	}
+
+	for (int32 i = 0; i < SelectedStreetMapComponent->LandscapeSettings.Layers.Num(); ++i)
+	{
+		if (!SelectedStreetMapComponent->LandscapeSettings.Layers[i].LayerInfo)
+		{
+			return false;
+		}
+	}
+
+	return true;
+}
+
+void FStreetMapComponentDetails::RefreshLandscapeLayersList()
+{
+	if (!SelectedStreetMapComponent) return;
+
+	UMaterialInterface* Material = SelectedStreetMapComponent->LandscapeSettings.Material;
+	TArray<FName> LayerNames = ALandscapeProxy::GetLayersFromMaterial(Material);
+
+	const TArray<FLandscapeImportLayerInfo> OldLayersList = MoveTemp(SelectedStreetMapComponent->LandscapeSettings.Layers);
+	SelectedStreetMapComponent->LandscapeSettings.Layers.Reset(LayerNames.Num());
+
+	for (int32 i = 0; i < LayerNames.Num(); i++)
+	{
+		const FName& LayerName = LayerNames[i];
+
+		bool bFound = false;
+		FLandscapeImportLayerInfo NewImportLayer;
+		for (int32 j = 0; j < OldLayersList.Num(); j++)
+		{
+			if (OldLayersList[j].LayerName == LayerName)
+			{
+				NewImportLayer = OldLayersList[j];
+				bFound = true;
+				break;
+			}
+		}
+
+		if (!bFound)
+		{
+			NewImportLayer.LayerName = LayerName;
+		}
+
+		SelectedStreetMapComponent->LandscapeSettings.Layers.Add(MoveTemp(NewImportLayer));
+	}
+}
+
 
 #undef LOCTEXT_NAMESPACE

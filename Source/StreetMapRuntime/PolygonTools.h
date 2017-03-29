@@ -15,7 +15,7 @@ public:
 	/** Determines if the specified point is inside the triangle defined by the three triangle corners */
 	static inline bool IsPointInsideTriangle( const FVector2D TriangleA, const FVector2D TriangleB, const FVector2D TriangleC, const FVector2D Point );
 
-	/** Given a 2D polygon and a point, determines whether the point is inside the polygon.  Supports convex polygons.  If the point is exactly on the polygon boundary, the return value could be either false or true. */
+	/** Given a 2D polygon and a point, determines whether the point is inside the polygon.  Supports concave polygons.  If the point is exactly on the polygon boundary, the return value could be either false or true. */
 	static inline bool IsPointInsidePolygon( const TArray<FVector2D>& Polygon, const FVector2D Point );
 
 
