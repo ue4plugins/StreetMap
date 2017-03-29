@@ -287,7 +287,7 @@ int32 FCachedElevationFile::NumPendingDownloads = 0;
 static int32 GetNumVerticesForRadius(const FStreetMapLandscapeBuildSettings& BuildSettings, int32& OutSubsectionSizeQuads)
 {
 	int32 Size = FMath::RoundToInt(BuildSettings.Radius / BuildSettings.QuadSize);
-	OutSubsectionSizeQuads = FMath::RoundUpToPowerOfTwo(Size) / 32 - 1;
+	OutSubsectionSizeQuads = FMath::RoundUpToPowerOfTwo(Size) / 16 - 1;
 	Size = FMath::DivideAndRoundUp(Size, OutSubsectionSizeQuads) * OutSubsectionSizeQuads;
 	return Size;
 }
@@ -295,6 +295,7 @@ static int32 GetNumVerticesForRadius(const FStreetMapLandscapeBuildSettings& Bui
 // @todo: replace these by the real engine values
 static const float DefaultLandscapeScaleXY = 128.0f;
 static const float DefaultLandscapeScaleZ = 256.0f;
+static const float OSMToCentimetersScaleFactor = 100.0f;
 
 class FElevationModel
 {
@@ -321,8 +322,12 @@ public:
 			const UStreetMap* StreetMap = StreetMapComponent->GetStreetMap();
 			const FSpatialReferenceSystem SRS(StreetMap->GetOriginLongitude(), StreetMap->GetOriginLatitude());
 
-			const FVector2D SouthWest(-BuildSettings.Radius,  BuildSettings.Radius);
-			const FVector2D NorthEast( BuildSettings.Radius, -BuildSettings.Radius);
+			int32 SubsectionSizeQuads;
+			const int32 NumVerticesForRadius = GetNumVerticesForRadius(BuildSettings, SubsectionSizeQuads);
+			const float FinalRadius = NumVerticesForRadius * BuildSettings.QuadSize;
+
+			const FVector2D SouthWest(-FinalRadius, FinalRadius);
+			const FVector2D NorthEast(FinalRadius, -FinalRadius);
 			double South, West, North, East;
 			if (!SRS.ToEPSG3857(SouthWest, West, South) || !SRS.ToEPSG3857(NorthEast, East, North))
 			{
@@ -466,7 +471,6 @@ public:
 		// compute exact scale of landscape
 		// Landscape docs say: At Z Scale = 100 landscape has an height range limit of -256m:256. 
 		const float LandscapeInternalScaleZ = 512.0f / 100.0f;
-		const float OSMToCentimetersScaleFactor = 100.0f;
 		const float ScaleXY = OSMToCentimetersScaleFactor * BuildSettings.QuadSize / DefaultLandscapeScaleXY;
 		const float ScaleZ = ElevationRange / DefaultLandscapeScaleZ / LandscapeInternalScaleZ;
 		const auto Scale3D = FVector(ScaleXY, ScaleXY, ScaleZ);
@@ -607,12 +611,11 @@ static ALandscape* CreateLandscape(UStreetMapComponent* StreetMapComponent, cons
 						{
 							for (int32 X = MinX; X <= MaxX; X++)
 							{
-								const FVector VertexPositionLocal(X, Y, 0.0f);
-								const FVector VertexPositionWorld = TransformWorld.TransformPosition(VertexPositionLocal);
-								const FVector2D VertexPositionWorld2D(VertexPositionWorld.X, VertexPositionWorld.Y);
+								FVector2D VertexLocation(X * BuildSettings.QuadSize * OSMToCentimetersScaleFactor, 
+														 Y * BuildSettings.QuadSize * OSMToCentimetersScaleFactor);
 
 								// @todo: use distance to polygon instead to enable smooth blend weights
-								if (FPolygonTools::IsPointInsidePolygon(Polygon->Points, VertexPositionWorld2D))
+								if (FPolygonTools::IsPointInsidePolygon(Polygon->Points, VertexLocation))
 								{
 									const int32 PixelIndex = (Y + NumVerticesForRadius) * Size + X + NumVerticesForRadius;
 									WeightData[PixelIndex] = 255;
