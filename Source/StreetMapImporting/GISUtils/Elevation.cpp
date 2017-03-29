@@ -284,9 +284,12 @@ public:
 
 int32 FCachedElevationFile::NumPendingDownloads = 0;
 
-static int32 GetNumVerticesForRadius(const FStreetMapLandscapeBuildSettings& BuildSettings)
+static int32 GetNumVerticesForRadius(const FStreetMapLandscapeBuildSettings& BuildSettings, int32& OutSubsectionSizeQuads)
 {
-	return FMath::RoundToInt(BuildSettings.Radius / BuildSettings.QuadSize);
+	int32 Size = FMath::RoundToInt(BuildSettings.Radius / BuildSettings.QuadSize);
+	OutSubsectionSizeQuads = FMath::RoundUpToPowerOfTwo(Size) / 32 - 1;
+	Size = FMath::DivideAndRoundUp(Size, OutSubsectionSizeQuads) * OutSubsectionSizeQuads;
+	return Size;
 }
 
 // @todo: replace these by the real engine values
@@ -414,8 +417,10 @@ public:
 		const UStreetMap* StreetMap = StreetMapComponent->GetStreetMap();
 		const FSpatialReferenceSystem SRS(StreetMap->GetOriginLongitude(), StreetMap->GetOriginLatitude());
 
+		int32 SubsectionSizeQuads;
+
 		const uint32 LevelIndex = TiledMap.NumLevels - 1;
-		const int32 NumVerticesForRadius = GetNumVerticesForRadius(BuildSettings);
+		const int32 NumVerticesForRadius = GetNumVerticesForRadius(BuildSettings, SubsectionSizeQuads);
 		const int32 Size = NumVerticesForRadius * 2;
 		const float ElevationRange = ElevationMax - ElevationMin;
 		const float ElevationScale = 65535.0f / ElevationRange;
@@ -546,7 +551,8 @@ static ALandscape* CreateLandscape(UStreetMapComponent* StreetMapComponent, cons
 	UWorld* World = StreetMapComponent->GetOwner()->GetWorld();
 	UStreetMap* StreetMap = StreetMapComponent->GetStreetMap();
 
-	const int32 NumVerticesForRadius = GetNumVerticesForRadius(BuildSettings);
+	int32 SubsectionSizeQuads;
+	const int32 NumVerticesForRadius = GetNumVerticesForRadius(BuildSettings, SubsectionSizeQuads);
 	const int32 Size = NumVerticesForRadius * 2;
 	const FTransform DefaultLandscapeVertexToWorld(FQuat::Identity, FVector::ZeroVector, FVector(DefaultLandscapeScaleXY, DefaultLandscapeScaleXY, DefaultLandscapeScaleZ));
 	const FTransform TransformWorld = Transform * DefaultLandscapeVertexToWorld;
@@ -612,9 +618,9 @@ static ALandscape* CreateLandscape(UStreetMapComponent* StreetMapComponent, cons
 									WeightData[PixelIndex] = 255;
 
 									// Deactivate the blendweight of this pixel of all other layers
-									for (auto& ImportLayer : ImportLayers)
+									for (auto& PreviousImportLayer : ImportLayers)
 									{
-										ImportLayer.LayerData[PixelIndex] = 0;
+										PreviousImportLayer.LayerData[PixelIndex] = 0;
 									}
 								}
 							}
@@ -635,13 +641,12 @@ static ALandscape* CreateLandscape(UStreetMapComponent* StreetMapComponent, cons
 	}
 
 	SlowTask.EnterProgressFrame(1.0f, LOCTEXT("GeneratingLandscapeMesh", "Generating Landscape Mesh"));
-	int32 SubsectionSizeQuads = FMath::RoundUpToPowerOfTwo(Size) / 32 - 1;
 	ALandscape* Landscape = World->SpawnActor<ALandscape>(ALandscape::StaticClass(), Transform);
 	Landscape->LandscapeMaterial = BuildSettings.Material;
 	Landscape->Import(FGuid::NewGuid(), 
 		-NumVerticesForRadius, -NumVerticesForRadius,
 		NumVerticesForRadius - 1, NumVerticesForRadius - 1,
-		2, SubsectionSizeQuads, ElevationData.GetData(), nullptr,
+		1, SubsectionSizeQuads, ElevationData.GetData(), nullptr,
 		ImportLayers, ELandscapeImportAlphamapType::Additive);
 
 	// automatically calculate a lighting LOD that won't crash lightmass (hopefully)
