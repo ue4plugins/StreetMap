@@ -14,6 +14,7 @@
 #include "SpatialReferenceSystem.h"
 #include "TiledMap.h"
 #include "LandscapeInfo.h"
+#include "PolygonTools.h"
 
 #define LOCTEXT_NAMESPACE "StreetMapImporting"
 
@@ -288,6 +289,10 @@ static int32 GetNumVerticesForRadius(const FStreetMapLandscapeBuildSettings& Bui
 	return FMath::RoundToInt(BuildSettings.Radius / BuildSettings.QuadSize);
 }
 
+// @todo: replace these by the real engine values
+static const float DefaultLandscapeScaleXY = 128.0f;
+static const float DefaultLandscapeScaleZ = 256.0f;
+
 class FElevationModel
 {
 public:
@@ -455,10 +460,8 @@ public:
 
 		// compute exact scale of landscape
 		// Landscape docs say: At Z Scale = 100 landscape has an height range limit of -256m:256. 
-		const float OSMToCentimetersScaleFactor = 100.0f;
-		const float DefaultLandscapeScaleXY = 128.0f;
-		const float DefaultLandscapeScaleZ = 256.0f;
 		const float LandscapeInternalScaleZ = 512.0f / 100.0f;
+		const float OSMToCentimetersScaleFactor = 100.0f;
 		const float ScaleXY = OSMToCentimetersScaleFactor * BuildSettings.QuadSize / DefaultLandscapeScaleXY;
 		const float ScaleZ = ElevationRange / DefaultLandscapeScaleZ / LandscapeInternalScaleZ;
 		const auto Scale3D = FVector(ScaleXY, ScaleXY, ScaleZ);
@@ -545,14 +548,18 @@ static ALandscape* CreateLandscape(UStreetMapComponent* StreetMapComponent, cons
 
 	const int32 NumVerticesForRadius = GetNumVerticesForRadius(BuildSettings);
 	const int32 Size = NumVerticesForRadius * 2;
+	const FTransform DefaultLandscapeVertexToWorld(FQuat::Identity, FVector::ZeroVector, FVector(DefaultLandscapeScaleXY, DefaultLandscapeScaleXY, DefaultLandscapeScaleZ));
+	const FTransform TransformWorld = Transform * DefaultLandscapeVertexToWorld;
+	const FTransform TransformLocal = TransformWorld.Inverse();
 
 	// create import layers
 	TArray<FLandscapeImportLayerInfo> ImportLayers;
 	{
 		ImportLayers.Reserve(BuildSettings.Layers.Num());
 		const float FillBlendWeightProgress = 0.125f / BuildSettings.Layers.Num();
+		const FText ProgressText = LOCTEXT("FillingBlendweights", "Rasterizing Blendweights");
 
-		// Fill in LayerInfos array and allocate data
+		// Fill in LayerInfos array, allocate blendweight data and fill it according to the land use
 		for (const FLandscapeImportLayerInfo& UIImportLayer : BuildSettings.Layers)
 		{
 			FLandscapeImportLayerInfo ImportLayer = FLandscapeImportLayerInfo(UIImportLayer.LayerName);
@@ -570,21 +577,60 @@ static ALandscape* CreateLandscape(UStreetMapComponent* StreetMapComponent, cons
 			}
 			else
 			{
-				// fill the blend weights based on land use for the other layers
+				// Fill the blend weights based on land use for the other layers
 				TArray<const FStreetMapMiscWay*> Polygons;
 				GetPolygonWaysForLayer(UIImportLayer.LayerName, StreetMap, Polygons);
 
 				FMemory::Memset(WeightData, 0, Size * Size);
-				*WeightData = 1; // Ensure at least one pixel has a value to keep this layer in editor settings
-
-				for(const auto& Polygon : Polygons)
+				if(Polygons.Num() > 0)
 				{
-					// @todo: set blendweight of vertices hit by polygon
+					const float FillBlendWeightProgressPerPolygon = FillBlendWeightProgress / Polygons.Num();
+					for(const FStreetMapMiscWay* Polygon : Polygons)
+					{
+						// Transform polygon AABB into blendweight/vertex space
+						const FVector Min = TransformLocal.TransformPosition(FVector(Polygon->BoundsMin, 0.0f));
+						const FVector Max = TransformLocal.TransformPosition(FVector(Polygon->BoundsMax, 0.0f));
+
+						// Ensure we do not paint over the limits of the available blendweight area
+						const int32 MinX = FMath::Max(-NumVerticesForRadius, FMath::FloorToInt(Min.X));
+						const int32 MinY = FMath::Max(-NumVerticesForRadius, FMath::FloorToInt(Min.Y));
+						const int32 MaxX = FMath::Min( NumVerticesForRadius - 1, FMath::CeilToInt(Max.X));
+						const int32 MaxY = FMath::Min( NumVerticesForRadius - 1, FMath::CeilToInt(Max.Y));
+
+						for (int32 Y = MinY; Y <= MaxY; Y++)
+						{
+							for (int32 X = MinX; X <= MaxX; X++)
+							{
+								const FVector VertexPositionLocal(X, Y, 0.0f);
+								const FVector VertexPositionWorld = TransformWorld.TransformPosition(VertexPositionLocal);
+								const FVector2D VertexPositionWorld2D(VertexPositionWorld.X, VertexPositionWorld.Y);
+
+								// @todo: use distance to polygon instead to enable smooth blend weights
+								if (FPolygonTools::IsPointInsidePolygon(Polygon->Points, VertexPositionWorld2D))
+								{
+									const int32 PixelIndex = (Y + NumVerticesForRadius) * Size + X + NumVerticesForRadius;
+									WeightData[PixelIndex] = 255;
+
+									// Deactivate the blendweight of this pixel of all other layers
+									for (auto& ImportLayer : ImportLayers)
+									{
+										ImportLayer.LayerData[PixelIndex] = 0;
+									}
+								}
+							}
+						}
+
+						SlowTask.EnterProgressFrame(FillBlendWeightProgressPerPolygon, ProgressText);
+					}
+				}
+				else
+				{
+					*WeightData = 1; // Ensure at least one pixel has a value to keep this layer in editor settings
+					SlowTask.EnterProgressFrame(FillBlendWeightProgress, ProgressText);
 				}
 			}
 
 			ImportLayers.Add(MoveTemp(ImportLayer));
-			SlowTask.EnterProgressFrame(FillBlendWeightProgress, LOCTEXT("FillingBlendweights", "Filling Blendweights"));
 		}
 	}
 
