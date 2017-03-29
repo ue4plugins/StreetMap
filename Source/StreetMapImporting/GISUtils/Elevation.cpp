@@ -487,16 +487,61 @@ private:
 };
 
 
-ALandscape* CreateLandscape(UStreetMapComponent* StreetMapComponent, const FStreetMapLandscapeBuildSettings& BuildSettings, const FTransform& Transform, const TArray<uint16>& ElevationData, FScopedSlowTask& SlowTask)
+typedef TTuple<EStreetMapMiscWayType, FString> FWayMatch;
+bool operator==(const FWayMatch& LHS, const FWayMatch& RHS)
 {
-	SlowTask.EnterProgressFrame(0.25f, LOCTEXT("CreatingLandscape", "Filling Landscape with data"));
+	return LHS.Get<0>() == RHS.Get<0>() && LHS.Get<1>() == RHS.Get<1>();
+}
 
+static void GetPolygonWaysForLayer(const FName& LayerName, const UStreetMap* StreetMap, TArray<const FStreetMapMiscWay*>& OutPolygons)
+{
+	static const TMap<FName, TArray<FWayMatch>> LayerWayMapping = []()
+	{
+		TMap<FName, TArray<FWayMatch>> Result;
+
+		// @todo: these mappings should probably not be hardcoded and be part of FStreetMapLandscapeBuildSettings instead
+		TArray<FWayMatch> GrassWays;
+		GrassWays.Add(FWayMatch(EStreetMapMiscWayType::LandUse, TEXT("grass")));
+		GrassWays.Add(FWayMatch(EStreetMapMiscWayType::LandUse, TEXT("village_green")));
+		GrassWays.Add(FWayMatch(EStreetMapMiscWayType::LandUse, TEXT("meadow")));
+		GrassWays.Add(FWayMatch(EStreetMapMiscWayType::LandUse, TEXT("farmland")));
+		GrassWays.Add(FWayMatch(EStreetMapMiscWayType::Leisure, TEXT("park")));
+		Result.Add("Grass", GrassWays);
+
+		TArray<FWayMatch> WoodWays;
+		WoodWays.Add(FWayMatch(EStreetMapMiscWayType::LandUse, TEXT("forest")));
+		WoodWays.Add(FWayMatch(EStreetMapMiscWayType::Natural, TEXT("wood")));
+		WoodWays.Add(FWayMatch(EStreetMapMiscWayType::Natural, TEXT("nature_reserve")));
+		Result.Add("Wood", WoodWays);
+
+		return Result;
+	}();
+
+	const TArray<FWayMatch>* WayMatches = LayerWayMapping.Find(LayerName);
+	if (!WayMatches)
+	{
+		return;
+	}
+
+	const TArray<FStreetMapMiscWay>& MiscWays = StreetMap->GetMiscWays();
+	for (const FStreetMapMiscWay& MiscWay : MiscWays)
+	{
+		if (!MiscWay.bIsClosed) continue;
+
+		const FWayMatch WayMatch(MiscWay.Type, MiscWay.Category);
+		if (WayMatches->Contains(WayMatch))
+		{
+			OutPolygons.Add(&MiscWay);
+		}
+	}
+}
+
+static ALandscape* CreateLandscape(UStreetMapComponent* StreetMapComponent, const FStreetMapLandscapeBuildSettings& BuildSettings, const FTransform& Transform, const TArray<uint16>& ElevationData, FScopedSlowTask& SlowTask)
+{
 	FScopedTransaction Transaction(LOCTEXT("Undo", "Creating New Landscape"));
 
 	UWorld* World = StreetMapComponent->GetOwner()->GetWorld();
 	UStreetMap* StreetMap = StreetMapComponent->GetStreetMap();
-
-	ALandscape* Landscape = World->SpawnActor<ALandscape>(ALandscape::StaticClass(), Transform);
 
 	const int32 NumVerticesForRadius = GetNumVerticesForRadius(BuildSettings);
 	const int32 Size = NumVerticesForRadius * 2;
@@ -505,6 +550,7 @@ ALandscape* CreateLandscape(UStreetMapComponent* StreetMapComponent, const FStre
 	TArray<FLandscapeImportLayerInfo> ImportLayers;
 	{
 		ImportLayers.Reserve(BuildSettings.Layers.Num());
+		const float FillBlendWeightProgress = 0.125f / BuildSettings.Layers.Num();
 
 		// Fill in LayerInfos array and allocate data
 		for (const FLandscapeImportLayerInfo& UIImportLayer : BuildSettings.Layers)
@@ -514,28 +560,37 @@ ALandscape* CreateLandscape(UStreetMapComponent* StreetMapComponent, const FStre
 			ImportLayer.SourceFilePath = "";
 			ImportLayer.LayerData = TArray<uint8>();
 
-			// @todo: fill the blend weights based on land use
-			// for now Fill the first weight-blended layer to 100%
-			const uint8 LayerBlendVaule = ImportLayers.Num() == 0 ? 255 : 0;
+			ImportLayer.LayerData.SetNumUninitialized(Size * Size);
+			uint8* WeightData = ImportLayer.LayerData.GetData();
+
+			if (ImportLayers.Num() == 0)
 			{
-				ImportLayer.LayerData.SetNumUninitialized(Size * Size);
+				// Set the first weight-blended layer to 100%
+				FMemory::Memset(WeightData, 255, Size * Size);
+			}
+			else
+			{
+				// fill the blend weights based on land use for the other layers
+				TArray<const FStreetMapMiscWay*> Polygons;
+				GetPolygonWaysForLayer(UIImportLayer.LayerName, StreetMap, Polygons);
 
-				uint8* ByteData = ImportLayer.LayerData.GetData();
-				for (int32 i = 0; i < Size * Size; i++)
+				FMemory::Memset(WeightData, 0, Size * Size);
+				*WeightData = 1; // Ensure at least one pixel has a value to keep this layer in editor settings
+
+				for(const auto& Polygon : Polygons)
 				{
-					ByteData[i] = LayerBlendVaule;
+					// @todo: set blendweight of vertices hit by polygon
 				}
-
-				ByteData[0] = 1; // Ensure at least one pixel has a value to keep this layer in editor settings
 			}
 
 			ImportLayers.Add(MoveTemp(ImportLayer));
+			SlowTask.EnterProgressFrame(FillBlendWeightProgress, LOCTEXT("FillingBlendweights", "Filling Blendweights"));
 		}
-
 	}
 
+	SlowTask.EnterProgressFrame(0.125f, LOCTEXT("GeneratingLandscapeMesh", "Generating Landscape Mesh"));
 	int32 SubsectionSizeQuads = FMath::RoundUpToPowerOfTwo(Size) / 32 - 1;
-
+	ALandscape* Landscape = World->SpawnActor<ALandscape>(ALandscape::StaticClass(), Transform);
 	Landscape->LandscapeMaterial = BuildSettings.Material;
 	Landscape->Import(FGuid::NewGuid(), 
 		-NumVerticesForRadius, -NumVerticesForRadius,

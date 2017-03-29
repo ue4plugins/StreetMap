@@ -334,6 +334,23 @@ struct STREETMAPRUNTIME_API FStreetMapBuilding
 };
 
 
+/** Types of miscellaneous ways */
+UENUM(BlueprintType)
+enum EStreetMapMiscWayType
+{
+	/** unknown type */
+	Unknown,
+
+	/** The leisure tag is for places people go in their spare time (e.g. parks, pitches). */
+	Leisure,
+
+	/** Used to describe natural and physical land features (e.g. wood, beach, water). */
+	Natural,
+
+	/** Used to describe the primary use of land by humans (e.g. grass, meadow, forest). */
+	LandUse,
+};
+
 /** A miscellaneous way */
 USTRUCT(BlueprintType)
 struct STREETMAPRUNTIME_API FStreetMapMiscWay
@@ -342,11 +359,15 @@ struct STREETMAPRUNTIME_API FStreetMapMiscWay
 
 	/** Name of the way */
 	UPROPERTY(Category = StreetMap, EditAnywhere)
-	FString Name;
+		FString Name;
 
-	/** Polygon points that define the perimeter of the way */
+	/** Category of the way */
 	UPROPERTY(Category = StreetMap, EditAnywhere)
-	TArray<FVector2D> Points;
+		FString Category;
+
+	/** points that define the the way (line or polygon) */
+	UPROPERTY(Category = StreetMap, EditAnywhere)
+		TArray<FVector2D> Points;
 
 	// @todo: Performance: Bounding information could be computed at load time if we want to avoid the memory cost of storing it
 
@@ -357,6 +378,14 @@ struct STREETMAPRUNTIME_API FStreetMapMiscWay
 	/** 2D bounds (max) of this way's points */
 	UPROPERTY(Category = StreetMap, EditAnywhere)
 		FVector2D BoundsMax;
+
+	/** The OSM type this way is marked as */
+	UPROPERTY(Category = StreetMap, EditAnywhere)
+		TEnumAsByte<EStreetMapMiscWayType> Type;
+
+	/** Indicates whether this a closed polygon or just a line strip */
+	UPROPERTY(Category = StreetMap, EditAnywhere)
+		bool bIsClosed;
 };
 
 /** A loaded street map */

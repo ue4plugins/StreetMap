@@ -305,7 +305,16 @@ bool UStreetMapFactory::LoadFromOpenStreetMapXMLFile( UStreetMap* StreetMap, FSt
 		}
 		else
 		{
-			// Unclosed shapes are total fine since (e.g. tree_row)
+			// Unclosed shapes are total fine (e.g. tree_row)
+		}
+
+
+		NewMiscWay.Type = EStreetMapMiscWayType::Unknown;
+		switch (OSMWay.WayType)
+		{
+			case FOSMFile::EOSMWayType::Leisure: NewMiscWay.Type = EStreetMapMiscWayType::Leisure; break;
+			case FOSMFile::EOSMWayType::Natural: NewMiscWay.Type = EStreetMapMiscWayType::Natural; break;
+			case FOSMFile::EOSMWayType::LandUse: NewMiscWay.Type = EStreetMapMiscWayType::LandUse; break;
 		}
 
 		NewMiscWay.Name = OSMWay.Name;
@@ -314,8 +323,11 @@ bool UStreetMapFactory::LoadFromOpenStreetMapXMLFile( UStreetMap* StreetMap, FSt
 			NewMiscWay.Name = OSMWay.Ref;
 		}
 
+		NewMiscWay.Category = OSMWay.Category;
+
 		NewMiscWay.BoundsMin = BoundsMin;
 		NewMiscWay.BoundsMax = BoundsMax;
+		NewMiscWay.bIsClosed = bIsClosed;
 
 		StreetMapRef.BoundsMin.X = FMath::Min(StreetMapRef.BoundsMin.X, BoundsMin.X);
 		StreetMapRef.BoundsMin.Y = FMath::Min(StreetMapRef.BoundsMin.Y, BoundsMin.Y);
