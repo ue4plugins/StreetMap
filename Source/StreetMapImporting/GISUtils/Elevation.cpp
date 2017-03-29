@@ -420,7 +420,7 @@ public:
 		const float ElevationRange = ElevationMax - ElevationMin;
 		const float ElevationScale = 65535.0f / ElevationRange;
 
-		const float ProgressPerRow = 0.5f / Size;
+		const float ProgressPerRow = 1.0f / Size;
 
 		// sample elevation value for each height map vertex
 		OutElevationData.SetNumUninitialized(Size * Size);
@@ -556,8 +556,8 @@ static ALandscape* CreateLandscape(UStreetMapComponent* StreetMapComponent, cons
 	TArray<FLandscapeImportLayerInfo> ImportLayers;
 	{
 		ImportLayers.Reserve(BuildSettings.Layers.Num());
-		const float FillBlendWeightProgress = 0.125f / BuildSettings.Layers.Num();
-		const FText ProgressText = LOCTEXT("FillingBlendweights", "Rasterizing Blendweights");
+		const float FillBlendWeightProgress = 1.0f / (BuildSettings.Layers.Num() - 1);
+		const FText ProgressText = LOCTEXT("FillingBlendweights", "Rasterizing Blend Weights");
 
 		// Fill in LayerInfos array, allocate blendweight data and fill it according to the land use
 		for (const FLandscapeImportLayerInfo& UIImportLayer : BuildSettings.Layers)
@@ -634,7 +634,7 @@ static ALandscape* CreateLandscape(UStreetMapComponent* StreetMapComponent, cons
 		}
 	}
 
-	SlowTask.EnterProgressFrame(0.125f, LOCTEXT("GeneratingLandscapeMesh", "Generating Landscape Mesh"));
+	SlowTask.EnterProgressFrame(1.0f, LOCTEXT("GeneratingLandscapeMesh", "Generating Landscape Mesh"));
 	int32 SubsectionSizeQuads = FMath::RoundUpToPowerOfTwo(Size) / 32 - 1;
 	ALandscape* Landscape = World->SpawnActor<ALandscape>(ALandscape::StaticClass(), Transform);
 	Landscape->LandscapeMaterial = BuildSettings.Material;
@@ -645,8 +645,8 @@ static ALandscape* CreateLandscape(UStreetMapComponent* StreetMapComponent, cons
 		ImportLayers, ELandscapeImportAlphamapType::Additive);
 
 	// automatically calculate a lighting LOD that won't crash lightmass (hopefully)
-	// < 2048x2048 -> LOD0
-	// >=2048x2048 -> LOD1
+	//  < 2048x2048 -> LOD0
+	// >= 2048x2048 -> LOD1
 	// >= 4096x4096 -> LOD2
 	// >= 8192x8192 -> LOD3
 	Landscape->StaticLightingLOD = FMath::DivideAndRoundUp(FMath::CeilLogTwo((Size * Size) / (2048 * 2048) + 1), (uint32)2);
@@ -678,7 +678,7 @@ static ALandscape* CreateLandscape(UStreetMapComponent* StreetMapComponent, cons
 
 ALandscape* BuildLandscape(UStreetMapComponent* StreetMapComponent, const FStreetMapLandscapeBuildSettings& BuildSettings)
 {
-	FScopedSlowTask SlowTask(2.0f, LOCTEXT("GeneratingLandscape", "Generating Landscape"));
+	FScopedSlowTask SlowTask(4.0f, LOCTEXT("GeneratingLandscape", "Generating Landscape"));
 	SlowTask.MakeDialog(true);
 
 	FElevationModel ElevationModel(FTiledMap::MapzenElevation());
