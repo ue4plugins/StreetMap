@@ -41,6 +41,8 @@ If you're new to plugins in UE4, you can find lots of information [right here](h
 
 Here's how to get data for a location you're interested in:
 
+**For larger areas (more than a neighborhood or small town) you should use [Mapzen Extracts](https://mapzen.com/data/metro-extracts).**
+
 * Go to [OpenStreetMap.org](http://www.openstreetmap.org) and use the search feature to navigate to your *favorite location on Earth*.
 
 * Click the **Export** button on navigation bar at the top of the page to go into *Export Mode*.
