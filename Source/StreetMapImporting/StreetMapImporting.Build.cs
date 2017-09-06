@@ -4,7 +4,8 @@ namespace UnrealBuildTool.Rules
 {
     public class StreetMapImporting : ModuleRules
     {
-        public StreetMapImporting(TargetInfo Target)
+        public StreetMapImporting(ReadOnlyTargetRules Target)
+			: base(Target)
         {
             PrivateDependencyModuleNames.AddRange(
                 new string[] {
