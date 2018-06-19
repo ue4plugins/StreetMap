@@ -15,9 +15,15 @@ namespace UnrealBuildTool.Rules
 					"RHI",
 					"RenderCore",
 					"ShaderCore",
-                    "PropertyEditor"
                 }
 			);
-		}
+
+            if (Target.bBuildEditor == true)
+            {
+                //@TODO: Needed for FPropertyEditorModule::NotifyCustomizationModuleChanged()
+                //@TOOD: To move/implement in FStreetMapComponentDetails
+                PrivateDependencyModuleNames.Add("PropertyEditor");
+            }
+        }
 	}
 }
