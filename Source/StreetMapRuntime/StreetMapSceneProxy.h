@@ -82,7 +82,7 @@ protected:
 	void InitResources();
 
 	/** Makes a MeshBatch for rendering.  Called every time the mesh is drawn */
-	void MakeMeshBatch(struct FMeshBatch& Mesh, class FMaterialRenderProxy* WireframeMaterialRenderProxyOrNull, bool bDrawCollision = false) const;
+	void MakeMeshBatch(struct FMeshBatch& Mesh, class FMeshElementCollector& Collector, class FMaterialRenderProxy* WireframeMaterialRenderProxyOrNull, bool bDrawCollision = false) const;
 
 	/** Checks to see if this mesh must be drawn during the dynamic pass.  Note that even when this returns false, we may still
 	have other (debug) geometry to render as dynamic */
@@ -92,7 +92,7 @@ protected:
 	bool IsInCollisionView(const FEngineShowFlags& EngineShowFlags) const;
 
 	// FPrimitiveSceneProxy interface
-	virtual void DrawStaticElements(class FStaticPrimitiveDrawInterface* PDI) override;
+	//virtual void DrawStaticElements(class FStaticPrimitiveDrawInterface* PDI) override;
 	virtual void GetDynamicMeshElements(const TArray<const FSceneView*>& Views, const FSceneViewFamily& ViewFamily, uint32 VisibilityMap, class FMeshElementCollector& Collector) const override;
 	virtual uint32 GetMemoryFootprint(void) const override;
 	virtual FPrimitiveViewRelevance GetViewRelevance(const class FSceneView* View) const override;
