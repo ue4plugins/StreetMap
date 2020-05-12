@@ -2,33 +2,34 @@
 
 namespace UnrealBuildTool.Rules
 {
-    public class StreetMapImporting : ModuleRules
+  public class StreetMapImporting : ModuleRules
+  {
+    public StreetMapImporting(ReadOnlyTargetRules Target)
+    : base(Target)
     {
-        public StreetMapImporting(ReadOnlyTargetRules Target)
-			: base(Target)
-        {
-            PrivateDependencyModuleNames.AddRange(
-                new string[] {
-                    "Core",
-                    "CoreUObject",
-                    "Engine",
-                    "UnrealEd",
-                    "XmlParser",
-                    "AssetTools",
-                    "Projects",
-                    "Slate",
-                    "EditorStyle",
-                    "SlateCore",
-                    "PropertyEditor",
-                    "RenderCore",
-                    "ShaderCore",
-                    "RHI",
-                    "RawMesh",
-                    "AssetTools",
-                    "AssetRegistry",
-                    "StreetMapRuntime"
-                }
-            );
+      PrivateDependencyModuleNames.AddRange(
+        new string[] {
+          "Core",
+          "CoreUObject",
+          "Engine",
+          "UnrealEd",
+          "XmlParser",
+          "AssetTools",
+          "Projects",
+          "Slate",
+          "EditorStyle",
+          "SlateCore",
+          "PropertyEditor",
+          "RenderCore",
+          "RHI",
+          "RawMesh",
+          "AssetTools",
+          "AssetRegistry",
+          "StreetMapRuntime"
         }
+      );
+
+      PrivateIncludePaths.AddRange(new string[]{"StreetMapImporting/Private"});
     }
+  }
 }

@@ -2,8 +2,8 @@
 
 #include "StreetMapImporting.h"
 #include "StreetMapStyle.h"
-#include "SlateStyle.h"
-#include "IPluginManager.h"
+#include "Styling/SlateStyle.h"
+#include "Interfaces/IPluginManager.h"
 
 #define IMAGE_BRUSH( RelativePath, ... ) FSlateImageBrush( FStreetMapStyle::InContent( RelativePath, ".png" ), __VA_ARGS__ )
 
