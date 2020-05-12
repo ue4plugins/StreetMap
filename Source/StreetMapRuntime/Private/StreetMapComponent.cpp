@@ -10,7 +10,7 @@
 #include "PhysicsEngine/BodySetup.h"
 
 #if WITH_EDITOR
-#include "ModuleManager.h"
+#include "Modules/ModuleManager.h"
 #include "PropertyEditorModule.h"
 #endif //WITH_EDITOR
 
@@ -516,7 +516,7 @@ void UStreetMapComponent::UpdateNavigationIfNeeded()
 {
 	if (bCanEverAffectNavigation || bNavigationRelevant)
 	{
-		UNavigationSystem::UpdateComponentInNavOctree(*this);
+		FNavigationSystem::UpdateComponentData(*this);
 	}
 }
 
