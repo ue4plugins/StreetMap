@@ -1,7 +1,7 @@
 // Copyright 2017 Mike Fricker. All Rights Reserved.
 
-#include "StreetMapImporting.h"
 #include "StreetMapAssetTypeActions.h"
+#include "StreetMapImporting.h"
 #include "StreetMap.h"
 #include "AssetData.h"
 

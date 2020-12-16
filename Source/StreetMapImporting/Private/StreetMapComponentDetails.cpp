@@ -1,8 +1,7 @@
 // Copyright 2017 Mike Fricker. All Rights Reserved.
 
-#include "StreetMapImporting.h"
-
 #include "StreetMapComponentDetails.h"
+#include "StreetMapImporting.h"
 
 #include "SlateBasics.h"
 #include "RawMesh.h"
@@ -14,11 +13,11 @@
 #include "IDetailsView.h"
 #include "IDetailCustomization.h"
 #include "AssetRegistryModule.h"
-#include "DlgPickAssetPath.h"
+#include "Dialogs/DlgPickAssetPath.h"
 #include "IDetailCustomization.h"
-#include "SNotificationList.h"
-#include "NotificationManager.h"
-#include "AssertionMacros.h"
+#include "Widgets/Notifications/SNotificationList.h"
+#include "Framework/Notifications/NotificationManager.h"
+#include "Misc/AssertionMacros.h"
 
 
 #include "StreetMapComponent.h"

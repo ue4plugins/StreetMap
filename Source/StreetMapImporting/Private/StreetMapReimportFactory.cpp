@@ -1,7 +1,7 @@
 // Copyright 2017 Mike Fricker. All Rights Reserved.
 
-#include "StreetMapImporting.h"
 #include "StreetMapReimportFactory.h"
+#include "StreetMapImporting.h"
 #include "StreetMap.h"
 
 

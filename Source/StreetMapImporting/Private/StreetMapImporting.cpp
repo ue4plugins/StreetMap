@@ -2,7 +2,7 @@
 
 #include "StreetMapImporting.h"
 #include "StreetMapAssetTypeActions.h"
-#include "ModuleManager.h"
+#include "Modules/ModuleManager.h"
 #include "StreetMapStyle.h"
 #include "StreetMapComponentDetails.h"
 
