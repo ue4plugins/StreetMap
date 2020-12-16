@@ -1,8 +1,7 @@
 // Copyright 2017 Mike Fricker. All Rights Reserved.
 
-#include "StreetMapImporting.h"
-
 #include "StreetMapComponentDetails.h"
+#include "StreetMapImporting.h"
 
 #include "SlateBasics.h"
 #include "RawMesh.h"

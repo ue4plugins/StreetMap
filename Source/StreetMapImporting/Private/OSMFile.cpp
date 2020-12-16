@@ -1,7 +1,7 @@
 // Copyright 2017 Mike Fricker. All Rights Reserved.
 
-#include "StreetMapImporting.h"
 #include "OSMFile.h"
+#include "StreetMapImporting.h"
 
 
 FOSMFile::FOSMFile()
