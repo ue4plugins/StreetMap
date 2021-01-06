@@ -21,7 +21,6 @@ namespace UnrealBuildTool.Rules
                     "SlateCore",
                     "PropertyEditor",
                     "RenderCore",
-                    "ShaderCore",
                     "RHI",
                     "RawMesh",
                     "AssetTools",
