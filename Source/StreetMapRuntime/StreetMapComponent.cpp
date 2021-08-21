@@ -9,6 +9,10 @@
 
 #include "PhysicsEngine/BodySetup.h"
 
+#if ENGINE_MINOR_VERSION >= 20
+#include <NavigationSystem.h>
+#endif
+
 #if WITH_EDITOR
 #include "ModuleManager.h"
 #include "PropertyEditorModule.h"
@@ -516,7 +520,11 @@ void UStreetMapComponent::UpdateNavigationIfNeeded()
 {
 	if (bCanEverAffectNavigation || bNavigationRelevant)
 	{
-		UNavigationSystem::UpdateComponentInNavOctree(*this);
+#if ENGINE_MINOR_VERSION >= 20
+		UNavigationSystemV1::UpdateComponentInNavOctree(*this);
+#else
+        UNavigationSystem::UpdateComponentInNavOctree(*this);
+#endif
 	}
 }
 

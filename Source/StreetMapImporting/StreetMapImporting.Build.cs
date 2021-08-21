@@ -7,6 +7,8 @@ namespace UnrealBuildTool.Rules
         public StreetMapImporting(ReadOnlyTargetRules Target)
 			: base(Target)
         {
+            PrivatePCHHeaderFile = "StreetMapImporting.h";
+            
             PrivateDependencyModuleNames.AddRange(
                 new string[] {
                     "Core",
@@ -21,7 +23,6 @@ namespace UnrealBuildTool.Rules
                     "SlateCore",
                     "PropertyEditor",
                     "RenderCore",
-                    "ShaderCore",
                     "RHI",
                     "RawMesh",
                     "AssetTools",
@@ -29,6 +30,14 @@ namespace UnrealBuildTool.Rules
                     "StreetMapRuntime"
                 }
             );
+			if (Target.Version.MinorVersion <= 21)
+			{
+				PrivateDependencyModuleNames.AddRange(
+					new string[] {
+						"ShaderCore",
+					}
+				);
+			}
         }
     }
 }
