@@ -4,7 +4,7 @@
 #include "StreetMap.h"
 #include "Components/MeshComponent.h"
 #include "Interfaces/Interface_CollisionDataProvider.h"
-#include "StreetMapSceneProxy.h"
+#include "../StreetMapSceneProxy.h"
 #include "StreetMapComponent.generated.h"
 
 

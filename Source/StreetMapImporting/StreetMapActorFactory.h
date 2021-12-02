@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include <ActorFactories/ActorFactory.h>
 #include "StreetMapActorFactory.generated.h"
 
 UCLASS()

@@ -46,21 +46,25 @@ public:
 	UPROPERTY(Category = StreetMap, EditAnywhere, meta = (ClampMin = "0", UIMin = "0"), DisplayName = "Road Vertical Offset")
 		float RoadOffesetZ;
 
-	/** if true buildings mesh will be 3D instead of flat representation. */
+	/** if true buildings mesh will be created. */
 	UPROPERTY(Category = StreetMap, EditAnywhere, DisplayName = "Create 3D Buildings")
+		uint32 bWantBuildings : 1;
+
+	/** if true buildings mesh will be 3D instead of flat representation. */
+	UPROPERTY(Category = StreetMap, EditAnywhere, DisplayName = "Create 3D Buildings", meta = (EditCondition = bWantBuildings))
 		uint32 bWant3DBuildings : 1;
 
 	/** building level floor conversion factor in centimeters
 		@todo: harmonize with OSMToCentimetersScaleFactor refactoring
 	*/
-	UPROPERTY(Category = StreetMap, EditAnywhere, DisplayName = "Building Level Floor Factor")
+	UPROPERTY(Category = StreetMap, EditAnywhere, DisplayName = "Building Level Floor Factor", meta = (EditCondition = bWantBuildings))
 		float BuildingLevelFloorFactor = 300.0f;
 
 	/**
 	* If true, buildings mesh will receive light information.
 	* Lit buildings can't share vertices beyond quads (all quads have their own face normals), so this uses a lot more geometry.
 	*/
-	UPROPERTY(Category = StreetMap, EditAnywhere, DisplayName = "Lit buildings")
+	UPROPERTY(Category = StreetMap, EditAnywhere, DisplayName = "Lit buildings", meta = (EditCondition = bWantBuildings))
 	uint32 bWantLitBuildings : 1;
 
 	/** Streets thickness */
@@ -101,6 +105,7 @@ public:
 
 	FStreetMapMeshBuildSettings() :
 		RoadOffesetZ(0.0f),
+		bWantBuildings(true),
 		bWant3DBuildings(true),
 		bWantLitBuildings(true),
 		StreetThickness(800.0f),

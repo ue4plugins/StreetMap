@@ -14,11 +14,11 @@
 #include "IDetailsView.h"
 #include "IDetailCustomization.h"
 #include "AssetRegistryModule.h"
-#include "DlgPickAssetPath.h"
+#include "Dialogs/DlgPickAssetPath.h"
 #include "IDetailCustomization.h"
-#include "SNotificationList.h"
-#include "NotificationManager.h"
-#include "AssertionMacros.h"
+#include "Widgets/Notifications/SNotificationList.h"
+#include "Framework/Notifications/NotificationManager.h"
+#include "Misc/AssertionMacros.h"
 
 
 #include "StreetMapComponent.h"
@@ -278,17 +278,21 @@ FReply FStreetMapComponentDetails::OnCreateStaticMeshAssetClicked()
 			if (RawMesh.VertexPositions.Num() > 3 && RawMesh.WedgeIndices.Num() > 3)
 			{
 				// Then find/create it.
-				UPackage* Package = CreatePackage(NULL, *UserPackageName);
+				UPackage* Package = CreatePackage(*UserPackageName);
 				check(Package);
 
 				// Create StaticMesh object
 				UStaticMesh* StaticMesh = NewObject<UStaticMesh>(Package, MeshName, RF_Public | RF_Standalone);
 				StaticMesh->InitResources();
 
-				StaticMesh->LightingGuid = FGuid::NewGuid();
+				StaticMesh->SetLightingGuid(FGuid::NewGuid());
 
 				// Add source to new StaticMesh
+#if ENGINE_MINOR_VERSION >= 24
+                FStaticMeshSourceModel* SrcModel = new (StaticMesh->GetSourceModels()) FStaticMeshSourceModel();
+#else
 				FStaticMeshSourceModel* SrcModel = new (StaticMesh->SourceModels) FStaticMeshSourceModel();
+#endif
 				SrcModel->BuildSettings.bRecomputeNormals = false;
 				SrcModel->BuildSettings.bRecomputeTangents = false;
 				SrcModel->BuildSettings.bRemoveDegenerates = false;
@@ -302,7 +306,7 @@ FReply FStreetMapComponentDetails::OnCreateStaticMeshAssetClicked()
 				// Copy materials to new mesh
 				for (UMaterialInterface* Material : MeshMaterials)
 				{
-					StaticMesh->StaticMaterials.Add(FStaticMaterial(Material));
+					StaticMesh->GetStaticMaterials().Add(FStaticMaterial(Material));
 				}
 
 				//Set the Imported version before calling the build
@@ -324,7 +328,12 @@ FReply FStreetMapComponentDetails::OnCreateStaticMeshAssetClicked()
 					FNotificationInfo Info(FText::Format(LOCTEXT("StreetMapMeshConverted", "Successfully Converted Mesh"), FText::FromString(StaticMesh->GetName())));
 					Info.ExpireDuration = 8.0f;
 					Info.bUseLargeFont = false;
+#if ENGINE_MINOR_VERSION >= 24
+					UAssetEditorSubsystem* AssetEditorSubsystem = GEditor->GetEditorSubsystem<UAssetEditorSubsystem>();
+                    Info.Hyperlink = FSimpleDelegate::CreateLambda([=]() { AssetEditorSubsystem->OpenEditorForAssets(TArray<UObject*>({ StaticMesh })); });
+#else
 					Info.Hyperlink = FSimpleDelegate::CreateLambda([=]() { FAssetEditorManager::Get().OpenEditorForAssets(TArray<UObject*>({ StaticMesh })); });
+#endif
 					Info.HyperlinkText = FText::Format(LOCTEXT("OpenNewAnimationHyperlink", "Open {0}"), FText::FromString(StaticMesh->GetName()));
 					TSharedPtr<SNotificationItem> Notification = FSlateNotificationManager::Get().AddNotification(Info);
 					if (Notification.IsValid())
