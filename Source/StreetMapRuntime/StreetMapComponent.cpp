@@ -1,20 +1,15 @@
-// Copyright 2017 Mike Fricker. All Rights Reserved.
-
-#include "StreetMapRuntime.h"
 #include "StreetMapComponent.h"
 #include "StreetMapSceneProxy.h"
+#include "NavigationSystem.h"
 #include "Runtime/Engine/Classes/Engine/StaticMesh.h"
 #include "Runtime/Engine/Public/StaticMeshResources.h"
 #include "PolygonTools.h"
-
 #include "PhysicsEngine/BodySetup.h"
 
 #if WITH_EDITOR
-#include "ModuleManager.h"
+#include "Modules/ModuleManager.h"
 #include "PropertyEditorModule.h"
 #endif //WITH_EDITOR
-
-
 
 UStreetMapComponent::UStreetMapComponent(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer),
@@ -238,7 +233,7 @@ void UStreetMapComponent::GenerateMesh()
 
 	if( StreetMap != nullptr )
 	{
-		FBox MeshBoundingBox;
+		FBox3f MeshBoundingBox;
 		MeshBoundingBox.Init();
 
 		const auto& Roads = StreetMap->GetRoads();
@@ -273,8 +268,8 @@ void UStreetMapComponent::GenerateMesh()
 			for( int32 PointIndex = 0; PointIndex < Road.RoadPoints.Num() - 1; ++PointIndex )
 			{
 				AddThick2DLine( 
-					Road.RoadPoints[ PointIndex ],
-					Road.RoadPoints[ PointIndex + 1 ],
+					FVector2f(Road.RoadPoints[ PointIndex ]),
+					FVector2f(Road.RoadPoints[ PointIndex + 1 ]),
 					RoadZ,
 					RoadThickness,
 					RoadColor,
@@ -285,7 +280,7 @@ void UStreetMapComponent::GenerateMesh()
 		
 		TArray< int32 > TempIndices;
 		TArray< int32 > TriangulatedVertexIndices;
-		TArray< FVector > TempPoints;
+		TArray< FVector3f > TempPoints;
 		for( int32 BuildingIndex = 0; BuildingIndex < Buildings.Num(); ++BuildingIndex )
 		{
 			const auto& Building = Buildings[ BuildingIndex ];
@@ -320,9 +315,9 @@ void UStreetMapComponent::GenerateMesh()
 					TempPoints.SetNum( Building.BuildingPoints.Num(), false );
 					for( int32 PointIndex = 0; PointIndex < Building.BuildingPoints.Num(); ++PointIndex )
 					{
-						TempPoints[ PointIndex ] = FVector( Building.BuildingPoints[ ( Building.BuildingPoints.Num() - PointIndex ) - 1 ], BuildingFillZ );
+						TempPoints[ PointIndex ] = FVector3f( FVector2f(Building.BuildingPoints[ ( Building.BuildingPoints.Num() - PointIndex ) - 1 ]), BuildingFillZ );
 					}
-					AddTriangles( TempPoints, TriangulatedVertexIndices, FVector::ForwardVector, FVector::UpVector, BuildingFillColor, MeshBoundingBox );
+					AddTriangles( TempPoints, TriangulatedVertexIndices, FVector3f::ForwardVector, FVector3f::UpVector, BuildingFillColor, MeshBoundingBox );
 				}
 
 				if( bWant3DBuildings && (Building.Height > KINDA_SMALL_NUMBER || Building.BuildingLevels > 0) )
@@ -338,16 +333,16 @@ void UStreetMapComponent::GenerateMesh()
 							TempPoints.SetNum( 4, false );
 
 							const int32 TopLeftVertexIndex = 0;
-							TempPoints[ TopLeftVertexIndex ] = FVector( Building.BuildingPoints[ WindsClockwise ? RightPointIndex : LeftPointIndex ], BuildingFillZ );
+							TempPoints[ TopLeftVertexIndex ] = FVector3f( FVector2f(Building.BuildingPoints[ WindsClockwise ? RightPointIndex : LeftPointIndex ]), BuildingFillZ );
 
 							const int32 TopRightVertexIndex = 1;
-							TempPoints[ TopRightVertexIndex ] = FVector( Building.BuildingPoints[ WindsClockwise ? LeftPointIndex : RightPointIndex ], BuildingFillZ );
+							TempPoints[ TopRightVertexIndex ] = FVector3f( FVector2f(Building.BuildingPoints[ WindsClockwise ? LeftPointIndex : RightPointIndex ]), BuildingFillZ );
 
 							const int32 BottomRightVertexIndex = 2;
-							TempPoints[ BottomRightVertexIndex ] = FVector( Building.BuildingPoints[ WindsClockwise ? LeftPointIndex : RightPointIndex ], 0.0f );
+							TempPoints[ BottomRightVertexIndex ] = FVector3f( FVector2f(Building.BuildingPoints[ WindsClockwise ? LeftPointIndex : RightPointIndex ]), 0.0f );
 
 							const int32 BottomLeftVertexIndex = 3;
-							TempPoints[ BottomLeftVertexIndex ] = FVector( Building.BuildingPoints[ WindsClockwise ? RightPointIndex : LeftPointIndex ], 0.0f );
+							TempPoints[ BottomLeftVertexIndex ] = FVector3f( FVector2f(Building.BuildingPoints[ WindsClockwise ? RightPointIndex : LeftPointIndex ]), 0.0f );
 
 
 							TempIndices.SetNum( 6, false );
@@ -360,9 +355,9 @@ void UStreetMapComponent::GenerateMesh()
 							TempIndices[ 4 ] = TopLeftVertexIndex;
 							TempIndices[ 5 ] = TopRightVertexIndex;
 
-							const FVector FaceNormal = FVector::CrossProduct( ( TempPoints[ 0 ] - TempPoints[ 2 ] ).GetSafeNormal(), ( TempPoints[ 0 ] - TempPoints[ 1 ] ).GetSafeNormal() );
-							const FVector ForwardVector = FVector::UpVector;
-							const FVector UpVector = FaceNormal;
+							const FVector3f FaceNormal = FVector3f::CrossProduct( ( TempPoints[ 0 ] - TempPoints[ 2 ] ).GetSafeNormal(), ( TempPoints[ 0 ] - TempPoints[ 1 ] ).GetSafeNormal() );
+							const FVector3f ForwardVector = FVector3f::UpVector;
+							const FVector3f UpVector = FaceNormal;
 							AddTriangles( TempPoints, TempIndices, ForwardVector, UpVector, BuildingFillColor, MeshBoundingBox );
 						}
 					}
@@ -375,10 +370,10 @@ void UStreetMapComponent::GenerateMesh()
 							const FVector2D Point = Building.BuildingPoints[ PointIndex ];
 
 							FStreetMapVertex& NewVertex = *new( this->Vertices )FStreetMapVertex();
-							NewVertex.Position = FVector( Point, 0.0f );
-							NewVertex.TextureCoordinate = FVector2D( 0.0f, 0.0f );	// NOTE: We're not using texture coordinates for anything yet
-							NewVertex.TangentX = FVector::ForwardVector;	 // NOTE: Tangents aren't important for these unlit buildings
-							NewVertex.TangentZ = FVector::UpVector;
+							NewVertex.Position = FVector3f( FVector2f(Point), 0.0f );
+							NewVertex.TextureCoordinate = FVector2f( 0.0f, 0.0f );	// NOTE: We're not using texture coordinates for anything yet
+							NewVertex.TangentX = FVector3f::ForwardVector;	 // NOTE: Tangents aren't important for these unlit buildings
+							NewVertex.TangentZ = FVector3f::UpVector;
 							NewVertex.Color = BuildingFillColor;
 
 							MeshBoundingBox += NewVertex.Position;
@@ -417,8 +412,8 @@ void UStreetMapComponent::GenerateMesh()
 				for( int32 PointIndex = 0; PointIndex < Building.BuildingPoints.Num(); ++PointIndex )
 				{
 					AddThick2DLine(
-						Building.BuildingPoints[ PointIndex ],
-						Building.BuildingPoints[ ( PointIndex + 1 ) % Building.BuildingPoints.Num() ],
+						FVector2f(Building.BuildingPoints[ PointIndex ]),
+						FVector2f(Building.BuildingPoints[ ( PointIndex + 1 ) % Building.BuildingPoints.Num() ]),
 						BuildingBorderZ,
 						BuildingBorderThickness,		// Thickness
 						BuildingBorderColor,
@@ -428,7 +423,7 @@ void UStreetMapComponent::GenerateMesh()
 			}
 		}
 
-		CachedLocalBounds = MeshBoundingBox;
+		CachedLocalBounds = FBox(MeshBoundingBox);
 	}
 }
 
@@ -516,7 +511,7 @@ void UStreetMapComponent::UpdateNavigationIfNeeded()
 {
 	if (bCanEverAffectNavigation || bNavigationRelevant)
 	{
-		UNavigationSystem::UpdateComponentInNavOctree(*this);
+		FNavigationSystem::UpdateComponentData(*this);
 	}
 }
 
@@ -547,46 +542,46 @@ FBoxSphereBounds UStreetMapComponent::CalcBounds( const FTransform& LocalToWorld
 }
 
 
-void UStreetMapComponent::AddThick2DLine( const FVector2D Start, const FVector2D End, const float Z, const float Thickness, const FColor& StartColor, const FColor& EndColor, FBox& MeshBoundingBox )
+void UStreetMapComponent::AddThick2DLine( const FVector2f Start, const FVector2f End, const float Z, const float Thickness, const FColor& StartColor, const FColor& EndColor, FBox3f& MeshBoundingBox )
 {
 	const float HalfThickness = Thickness * 0.5f;
 
-	const FVector2D LineDirection = ( End - Start ).GetSafeNormal();
-	const FVector2D RightVector( -LineDirection.Y, LineDirection.X );
+	const FVector2f LineDirection = ( End - Start ).GetSafeNormal();
+	const FVector2f RightVector( -LineDirection.Y, LineDirection.X );
 
 	const int32 BottomLeftVertexIndex = Vertices.Num();
 	FStreetMapVertex& BottomLeftVertex = *new( Vertices )FStreetMapVertex();
-	BottomLeftVertex.Position = FVector( Start - RightVector * HalfThickness, Z );
-	BottomLeftVertex.TextureCoordinate = FVector2D( 0.0f, 0.0f );
-	BottomLeftVertex.TangentX = FVector( LineDirection, 0.0f );
-	BottomLeftVertex.TangentZ = FVector::UpVector;
+	BottomLeftVertex.Position = FVector3f( Start - RightVector * HalfThickness, Z );
+	BottomLeftVertex.TextureCoordinate = FVector2f( 0.0f, 0.0f );
+	BottomLeftVertex.TangentX = FVector3f( LineDirection, 0.0f );
+	BottomLeftVertex.TangentZ = FVector3f::UpVector;
 	BottomLeftVertex.Color = StartColor;
 	MeshBoundingBox += BottomLeftVertex.Position;
 
 	const int32 BottomRightVertexIndex = Vertices.Num();
 	FStreetMapVertex& BottomRightVertex = *new( Vertices )FStreetMapVertex();
-	BottomRightVertex.Position = FVector( Start + RightVector * HalfThickness, Z );
-	BottomRightVertex.TextureCoordinate = FVector2D( 1.0f, 0.0f );
-	BottomRightVertex.TangentX = FVector( LineDirection, 0.0f );
-	BottomRightVertex.TangentZ = FVector::UpVector;
+	BottomRightVertex.Position = FVector3f( Start + RightVector * HalfThickness, Z );
+	BottomRightVertex.TextureCoordinate = FVector2f( 1.0f, 0.0f );
+	BottomRightVertex.TangentX = FVector3f( LineDirection, 0.0f );
+	BottomRightVertex.TangentZ = FVector3f::UpVector;
 	BottomRightVertex.Color = StartColor;
 	MeshBoundingBox += BottomRightVertex.Position;
 
 	const int32 TopRightVertexIndex = Vertices.Num();
 	FStreetMapVertex& TopRightVertex = *new( Vertices )FStreetMapVertex();
-	TopRightVertex.Position = FVector( End + RightVector * HalfThickness, Z );
-	TopRightVertex.TextureCoordinate = FVector2D( 1.0f, 1.0f );
-	TopRightVertex.TangentX = FVector( LineDirection, 0.0f );
-	TopRightVertex.TangentZ = FVector::UpVector;
+	TopRightVertex.Position = FVector3f( End + RightVector * HalfThickness, Z );
+	TopRightVertex.TextureCoordinate = FVector2f( 1.0f, 1.0f );
+	TopRightVertex.TangentX = FVector3f( LineDirection, 0.0f );
+	TopRightVertex.TangentZ = FVector3f::UpVector;
 	TopRightVertex.Color = EndColor;
 	MeshBoundingBox += TopRightVertex.Position;
 
 	const int32 TopLeftVertexIndex = Vertices.Num();
 	FStreetMapVertex& TopLeftVertex = *new( Vertices )FStreetMapVertex();
-	TopLeftVertex.Position = FVector( End - RightVector * HalfThickness, Z );
-	TopLeftVertex.TextureCoordinate = FVector2D( 0.0f, 1.0f );
-	TopLeftVertex.TangentX = FVector( LineDirection, 0.0f );
-	TopLeftVertex.TangentZ = FVector::UpVector;
+	TopLeftVertex.Position = FVector3f( End - RightVector * HalfThickness, Z );
+	TopLeftVertex.TextureCoordinate = FVector2f( 0.0f, 1.0f );
+	TopLeftVertex.TangentX = FVector3f( LineDirection, 0.0f );
+	TopLeftVertex.TangentZ = FVector3f::UpVector;
 	TopLeftVertex.Color = EndColor;
 	MeshBoundingBox += TopLeftVertex.Position;
 
@@ -600,15 +595,15 @@ void UStreetMapComponent::AddThick2DLine( const FVector2D Start, const FVector2D
 };
 
 
-void UStreetMapComponent::AddTriangles( const TArray<FVector>& Points, const TArray<int32>& PointIndices, const FVector& ForwardVector, const FVector& UpVector, const FColor& Color, FBox& MeshBoundingBox )
+void UStreetMapComponent::AddTriangles( const TArray<FVector3f>& Points, const TArray<int32>& PointIndices, const FVector3f& ForwardVector, const FVector3f& UpVector, const FColor& Color, FBox3f& MeshBoundingBox )
 {
 	const int32 FirstVertexIndex = Vertices.Num();
 
-	for( FVector Point : Points )
+	for( FVector3f Point : Points )
 	{
 		FStreetMapVertex& NewVertex = *new( Vertices )FStreetMapVertex();
 		NewVertex.Position = Point;
-		NewVertex.TextureCoordinate = FVector2D( 0.0f, 0.0f );	// NOTE: We're not using texture coordinates for anything yet
+		NewVertex.TextureCoordinate = FVector2f( 0.0f, 0.0f );	// NOTE: We're not using texture coordinates for anything yet
 		NewVertex.TangentX = ForwardVector;
 		NewVertex.TangentZ = UpVector;
 		NewVertex.Color = Color;

@@ -1,13 +1,13 @@
-# Street Map Plugin for UE4
+# Street Map Plugin for Unreal Engine
 
-This plugin allows you to import **OpenStreetMap** XML data into your **Unreal Engine 4** project as a new StreetMap asset type.  You can use the example **Street Map Component** to render streets and buildings.
+This plugin allows you to import **OpenStreetMap** XML data into your **Unreal Engine** project as a new StreetMap asset type.  You can use the example **Street Map Component** to render streets and buildings.
 
 ![UE4OSMBrooklyn](Docs/UE4OSMBrooklyn.png)
 
 ![UE4OSMRaleigh](Docs/UE4OSMRaleigh.png)
 
 Have fun!!  --[Mike](http://twitter.com/mike_fricker)
-
+[LICENSE.txt](LICENSE.txt)
 *(Note: This plugin is a just a fun weekend project and not officially supported by Epic.)*
 
 
@@ -30,7 +30,7 @@ It's easy to get up and running:
 
 If the rebuild was successful but you don't see the new features, double check that the **Street Map** plugin is enabled by clicking the **Settings** toolbar button, then click **Plugins**.  Locate the **Street Map** plugin and make sure **Enabled** is checked.
 
-If you're new to plugins in UE4, you can find lots of information [right here](https://wiki.unrealengine.com/An_Introduction_to_UE4_Plugins).
+If you're new to plugins in UE, you can find lots of information [right here](https://wiki.unrealengine.com/An_Introduction_to_UE4_Plugins).
 
 
 ## Getting OpenStreetMap Data
@@ -73,13 +73,13 @@ Please be aware, that the project community (the inhabitants!) is the essential 
 
 ### Street Map Assets
 
-When you **import an OSM** file, the plugin will create a new **Street Map asset** to represent the map data in UE4.  You can assign these to **Street Map Components**, or directly interact with the map data in C++ code.
+When you **import an OSM** file, the plugin will create a new **Street Map asset** to represent the map data in UE.  You can assign these to **Street Map Components**, or directly interact with the map data in C++ code.
 
 Roads are imported with *full connectivity data*!  This means you can design your own navigation algorithms pretty easily.
 
-OpenStreetMap positional data is stored in *geographic coordinates* (latitude and longitude), but UE4 doesn't support that coordinate system natively.  That is, we can't easily deal with spherical worlds in UE4 currently.  So during the import process, we project all map coordinates to a flat 2D plane.
+OpenStreetMap positional data is stored in *geographic coordinates* (latitude and longitude), but UE doesn't support that coordinate system natively.  That is, we can't easily deal with spherical worlds in UE currently.  So during the import process, we project all map coordinates to a flat 2D plane.
 
-The OSM data is imported at double precision, but we truncate everything to single precision floating point before saving our UE4 street map asset.  If you're planning to work with enormous map data sets at runtime, you'll need to modify this.
+The OSM data is imported at double precision, but we truncate everything to single precision floating point before saving our UE street map asset.  If you're planning to work with enormous map data sets at runtime, you'll need to modify this.
 
 
 ### Street Map Components
@@ -94,7 +94,7 @@ The generated street map mesh has vertex colors and normals, and you can assign 
 
 There are various "tweakable" variables to control how the renderable mesh is generated.  You can find these at the top of the *UStreetMapComponent::GenerateMesh()* function body.
 
-*(Street Map Component also serves as a straightforward example of how to write your own primitive components in UE4.)*
+*(Street Map Component also serves as a straightforward example of how to write your own primitive components in UE.)*
 
 
 ### OSM Files
@@ -110,7 +110,7 @@ Depending on your use case, you may want to heavily customize the **UStreetMap**
 
 There are various loose ends.
 
-* Importing files larger than 2GB will crash.  This is a current UE4 limitation.
+* Importing files larger than 2GB will crash.  This is a current UE limitation.
 
 * Some variants of generated OSM XML files won't load correctly.  For example, single-quote delimeters around values are not supported yet.
 
@@ -127,9 +127,9 @@ There are various loose ends.
 
 ### Compatibility
 
-This plug-in requires Visual Studio and either a C++ code project or the full Unreal Engine 4 source code from GitHub.  If you are new to programming in UE4, please see the official [Programming Guide](https://docs.unrealengine.com/latest/INT/Programming/index.html)! 
+This plug-in requires Visual Studio and either a C++ code project or the full Unreal Engine source code from GitHub.  If you are new to programming in UE, please see the official [Programming Guide](https://docs.unrealengine.com/latest/INT/Programming/index.html)! 
 
-The Street Map plugin should work on all platforms that UE4 supports, but the latest version has not been tested on every platform.
+The Street Map plugin should work on all platforms that UE supports, but the latest version has not been tested on every platform.
 
 We'll try to keep the source code up to date so that it works with new versions Unreal Engine as they are released.
 

@@ -1,13 +1,9 @@
-// Copyright 2017 Mike Fricker. All Rights Reserved.
 #pragma once
-
 #include "StreetMap.h"
 #include "Components/MeshComponent.h"
 #include "Interfaces/Interface_CollisionDataProvider.h"
-#include "StreetMapSceneProxy.h"
+#include "../StreetMapSceneProxy.h"
 #include "StreetMapComponent.generated.h"
-
-
 
 class UBodySetup;
 
@@ -141,10 +137,10 @@ protected:
 	void GenerateMesh();
 
 	/** Adds a 2D line to the raw mesh */
-	void AddThick2DLine(const FVector2D Start, const FVector2D End, const float Z, const float Thickness, const FColor& StartColor, const FColor& EndColor, FBox& MeshBoundingBox);
+	void AddThick2DLine(const FVector2f Start, const FVector2f End, const float Z, const float Thickness, const FColor& StartColor, const FColor& EndColor, FBox3f& MeshBoundingBox);
 
 	/** Adds 3D triangles to the raw mesh */
-	void AddTriangles(const TArray<FVector>& Points, const TArray<int32>& PointIndices, const FVector& ForwardVector, const FVector& UpVector, const FColor& Color, FBox& MeshBoundingBox);
+	void AddTriangles(const TArray<FVector3f>& Points, const TArray<int32>& PointIndices, const FVector3f& ForwardVector, const FVector3f& UpVector, const FColor& Color, FBox3f& MeshBoundingBox);
 
 
 protected:
@@ -171,18 +167,17 @@ protected:
 
 	/** Cached raw mesh vertices */
 	UPROPERTY()
-		TArray< struct FStreetMapVertex > Vertices;
+	TArray< struct FStreetMapVertex > Vertices;
 
 	/** Cached raw mesh triangle indices */
 	UPROPERTY()
-		TArray< uint32 > Indices;
+	TArray< uint32 > Indices;
 
 	/** Cached bounding box */
 	UPROPERTY()
-		FBoxSphereBounds CachedLocalBounds;
+	FBoxSphereBounds CachedLocalBounds;
 
 	/** Cached StreetMap DefaultMaterial */
 	UPROPERTY()
-		UMaterialInterface* StreetMapDefaultMaterial;
-
+	UMaterialInterface* StreetMapDefaultMaterial;
 };

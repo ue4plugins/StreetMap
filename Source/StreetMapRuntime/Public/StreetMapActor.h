@@ -1,7 +1,4 @@
-// Copyright 2017 Mike Fricker. All Rights Reserved.
-
 #pragma once
-
 #include "StreetMapActor.generated.h"
 
 /** An actor that renders a street map mesh component */

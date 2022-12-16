@@ -1,5 +1,3 @@
-// Copyright 2017 Mike Fricker. All Rights Reserved.
-
 #pragma once
 
 /** StreetMap Editor Style Helper Class. */

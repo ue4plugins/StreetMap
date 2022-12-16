@@ -1,6 +1,4 @@
-// Copyright 2017 Mike Fricker. All Rights Reserved.
 #pragma once
-
 #include "Runtime/Engine/Public/PrimitiveSceneProxy.h"
 #include "Runtime/Engine/Public/LocalVertexFactory.h"
 #include "Runtime/Engine/Public/DynamicMeshBuilder.h"
@@ -15,23 +13,23 @@ struct FStreetMapVertex
 
 	/** Location of the vertex in local space */
 	UPROPERTY()
-		FVector Position;
+	FVector3f Position;
 
 	/** Texture coordinate */
 	UPROPERTY()
-		FVector2D TextureCoordinate;
+	FVector2f TextureCoordinate;
 
 	/** Tangent vector X */
 	UPROPERTY()
-		FVector TangentX;
+	FVector3f TangentX;
 
 	/** Tangent vector Z (normal) */
 	UPROPERTY()
-		FVector TangentZ;
+	FVector3f TangentZ;
 
 	/** Color */
 	UPROPERTY()
-		FColor Color;
+	FColor Color;
 
 
 	/** Default constructor, leaves everything uninitialized */
@@ -42,10 +40,10 @@ struct FStreetMapVertex
 	/** Construct with a supplied position and tangents for the vertex */
 	FStreetMapVertex(const FVector InitLocation, const FVector2D InitTextureCoordinate, const FVector InitTangentX, const FVector InitTangentZ, const FColor InitColor)
 		: Position(InitLocation),
-		TextureCoordinate(InitTextureCoordinate),
-		TangentX(InitTangentX),
-		TangentZ(InitTangentZ),
-		Color(InitColor)
+		  TextureCoordinate(InitTextureCoordinate),
+		  TangentX(InitTangentX),
+		  TangentZ(InitTangentZ),
+		  Color(InitColor)
 	{
 	}
 };

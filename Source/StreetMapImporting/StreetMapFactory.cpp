@@ -1,10 +1,6 @@
-// Copyright 2017 Mike Fricker. All Rights Reserved.
-
-#include "StreetMapImporting.h"
 #include "StreetMapFactory.h"
 #include "OSMFile.h"
 #include "StreetMap.h"
-
 
 // Latitude/longitude scale factor
 //			- https://en.wikipedia.org/wiki/Equator#Exact_length
@@ -41,7 +37,7 @@ UObject* UStreetMapFactory::FactoryCreateText( UClass* Class, UObject* Parent, F
 
 	if( !bLoadedOkay )
 	{
-		StreetMap->MarkPendingKill();
+		StreetMap->MarkAsGarbage();
 		StreetMap = nullptr;
 	}
 
@@ -54,7 +50,7 @@ bool UStreetMapFactory::LoadFromOpenStreetMapXMLFile( UStreetMap* StreetMap, FSt
 	// OSM data is stored in meters.  This is the scale factor to convert those units into UE4's native units (cm)
 	// Keep in mind that if this is changed, UStreetMapComponent sizes for roads may need to be updated too!
 	// @todo: We should make this scale factor customizable as an import option
-	const float OSMToCentimetersScaleFactor = 100.0f;
+	const double OSMToCentimetersScaleFactor = 100.0;
 
 
 	// Converts latitude to meters
@@ -77,9 +73,9 @@ bool UStreetMapFactory::LoadFromOpenStreetMapXMLFile( UStreetMap* StreetMap, FSt
 		const double RelativeToLongitude ) -> FVector2D
 	{
 		// Applies Sanson-Flamsteed (sinusoidal) Projection (see http://www.progonos.com/furuti/MapProj/Normal/CartHow/HowSanson/howSanson.html)
-		return FVector2D(
-			(float)( ConvertLongitudeToMeters( Longitude, Latitude ) - ConvertLongitudeToMeters( RelativeToLongitude, Latitude ) ),
-			(float)( ConvertLatitudeToMeters( Latitude ) - ConvertLatitudeToMeters( RelativeToLatitude ) ) );
+		return FVector2d(
+			ConvertLongitudeToMeters( Longitude, Latitude ) - ConvertLongitudeToMeters( RelativeToLongitude, Latitude ),
+			ConvertLatitudeToMeters( Latitude ) - ConvertLatitudeToMeters( RelativeToLatitude ) );
 	};
 
 	// Adds a road to the street map using the OpenStreetMap data, flattening the road's coordinates into our map's space
@@ -236,7 +232,7 @@ bool UStreetMapFactory::LoadFromOpenStreetMapXMLFile( UStreetMap* StreetMap, FSt
 					// we get as much precision as possible.
 					const double RelativeToLatitude = OSMFile.AverageLatitude;
 					const double RelativeToLongitude = OSMFile.AverageLongitude;
-					const FVector2D NodePos = ConvertLatLongToMetersRelative(
+					const FVector2d NodePos = ConvertLatLongToMetersRelative(
 						OSMNode.Latitude,
 						OSMNode.Longitude,
 						RelativeToLatitude,

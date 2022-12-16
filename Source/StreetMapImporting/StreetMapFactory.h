@@ -1,9 +1,6 @@
-// Copyright 2017 Mike Fricker. All Rights Reserved.
 #pragma once
-
 #include "Factories/Factory.h"
 #include "StreetMapFactory.generated.h"
-
 
 /**
  * Import factory object for OpenStreetMap assets

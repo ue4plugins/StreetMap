@@ -1,8 +1,5 @@
-// Copyright 2017 Mike Fricker. All Rights Reserved.
 #pragma once
-
 #include "FastXml.h"
-
 
 /** OpenStreetMap file loader */
 class FOSMFile : public IFastXmlCallback

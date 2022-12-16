@@ -1,9 +1,5 @@
-// Copyright 2017 Mike Fricker. All Rights Reserved.
-
-#include "StreetMapImporting.h"
 #include "StreetMapReimportFactory.h"
 #include "StreetMap.h"
-
 
 UStreetMapReimportFactory::UStreetMapReimportFactory(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)

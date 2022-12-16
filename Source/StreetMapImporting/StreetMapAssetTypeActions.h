@@ -1,6 +1,4 @@
-// Copyright 2017 Mike Fricker. All Rights Reserved.
 #pragma once
-
 #include "AssetTypeActions_Base.h"
 
 class FStreetMapAssetTypeActions : public FAssetTypeActions_Base

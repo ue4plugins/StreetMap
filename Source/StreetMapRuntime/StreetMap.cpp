@@ -1,9 +1,5 @@
-// Copyright 2017 Mike Fricker. All Rights Reserved.
-
-#include "StreetMapRuntime.h"
 #include "StreetMap.h"
 #include "EditorFramework/AssetImportData.h"
-
 
 UStreetMap::UStreetMap()
 {

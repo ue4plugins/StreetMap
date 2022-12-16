@@ -1,5 +1,3 @@
-// Copyright 2017 Mike Fricker. All Rights Reserved.
-
 namespace UnrealBuildTool.Rules
 {
 	public class StreetMapRuntime : ModuleRules
@@ -14,8 +12,8 @@ namespace UnrealBuildTool.Rules
 					"Engine",
 					"RHI",
 					"RenderCore",
-					"ShaderCore",
-                    "PropertyEditor"
+                    "PropertyEditor",
+                    "NavigationSystem"
                 }
 			);
 		}

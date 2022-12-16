@@ -1,8 +1,5 @@
-// Copyright 2017 Mike Fricker. All Rights Reserved.
-
-#include "StreetMapImporting.h"
 #include "OSMFile.h"
-
+#include "Misc/FeedbackContext.h"
 
 FOSMFile::FOSMFile()
 	: ParsingState( ParsingState::Root )

@@ -1,17 +1,8 @@
-// Copyright 2017 Mike Fricker. All Rights Reserved.
-
-// Copyright 1998-2016 Epic Games, Inc. All Rights Reserved.
-
-#include "StreetMapImporting.h"
-#include "AssetData.h"
 #include "StreetMapActorFactory.h"
+#include "AssetRegistry/AssetData.h"
 #include "StreetMapActor.h"
 #include "StreetMapComponent.h"
 #include "StreetMap.h"
-
-
-//////////////////////////////////////////////////////////////////////////
-// UStreetMapActorFactory
 
 UStreetMapActorFactory::UStreetMapActorFactory(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)

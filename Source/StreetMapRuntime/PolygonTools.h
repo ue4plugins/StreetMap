@@ -1,9 +1,7 @@
-// Copyright 2017 Mike Fricker. All Rights Reserved.
 #pragma once
 
 class FPolygonTools
 {
-
 public:
 
 	/** Triangulate a polygon given a list of contour points, then places results as indices into the original polygon array.  Does not support polygons with holes. */

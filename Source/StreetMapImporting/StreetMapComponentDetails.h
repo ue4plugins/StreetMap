@@ -1,7 +1,4 @@
-// Copyright 2017 Mike Fricker. All Rights Reserved.
-
 #pragma once
-
 #include "IDetailCustomization.h"
 
 class  FStreetMapComponentDetails : public IDetailCustomization

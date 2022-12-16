@@ -1,8 +1,4 @@
-// Copyright 2017 Mike Fricker. All Rights Reserved.
-
-#include "StreetMapRuntime.h"
 #include "PolygonTools.h"
-
 
 // Based off "Efficient Polygon Triangulation" algorithm by John W. Ratcliff (http://flipcode.net/archives/Efficient_Polygon_Triangulation.shtml)
 bool FPolygonTools::TriangulatePolygon( const TArray<FVector2D>& Polygon, TArray<int32>& TempIndices, TArray<int32>& TriangulatedIndices, bool& OutWindsClockwise )

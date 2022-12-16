@@ -1,9 +1,6 @@
-// Copyright 2017 Mike Fricker. All Rights Reserved.
-
 #pragma once
-
+#include "Math/MathFwd.h"
 #include "StreetMap.generated.h"
-
 
 USTRUCT(BlueprintType)
 struct STREETMAPRUNTIME_API FStreetMapCollisionSettings
@@ -285,7 +282,7 @@ struct STREETMAPRUNTIME_API FStreetMapBuilding
 
 	/** Height of the building in meters (if known, otherwise zero) */
 	UPROPERTY( Category=StreetMap, EditAnywhere )
-	float Height;
+	double Height;
 
 	/** Levels of the building (if known, otherwise zero) */
 	UPROPERTY(Category = StreetMap, EditAnywhere)
