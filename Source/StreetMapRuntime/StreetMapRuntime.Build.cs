@@ -12,7 +12,6 @@ namespace UnrealBuildTool.Rules
 					"Engine",
 					"RHI",
 					"RenderCore",
-                    "PropertyEditor",
                     "NavigationSystem"
                 }
 			);
