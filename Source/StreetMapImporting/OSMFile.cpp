@@ -2,7 +2,11 @@
 #include "Misc/FeedbackContext.h"
 
 FOSMFile::FOSMFile()
-	: ParsingState( ParsingState::Root )
+	: ParsingState(ParsingState::Root),
+	  CurrentNodeID(0),
+	  CurrentNodeInfo(nullptr),
+	  CurrentWayInfo(nullptr),
+	  CurrentWayTagKey(nullptr)
 {
 }
 		

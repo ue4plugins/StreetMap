@@ -1,5 +1,6 @@
 #include "StreetMapReimportFactory.h"
 #include "StreetMap.h"
+#include "EditorFramework/AssetImportData.h"
 
 UStreetMapReimportFactory::UStreetMapReimportFactory(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)

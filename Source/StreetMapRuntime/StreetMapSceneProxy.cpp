@@ -1,10 +1,12 @@
 #include "StreetMapSceneProxy.h"
 #include "StreetMapComponent.h"
+#include "Materials/MaterialRenderProxy.h"
 #include "Runtime/Engine/Public/SceneManagement.h"
 
 FStreetMapSceneProxy::FStreetMapSceneProxy(const UStreetMapComponent* InComponent)
 	: FPrimitiveSceneProxy(InComponent),
 	  VertexFactory(GetScene().GetFeatureLevel(), "FStreetMapSceneProxy"),
+	  MaterialInterface(nullptr),
 	  StreetMapComp(InComponent),
 	  CollisionResponse(InComponent->GetCollisionResponseToChannels())
 {
@@ -99,10 +101,8 @@ FPrimitiveViewRelevance FStreetMapSceneProxy::GetViewRelevance( const FSceneView
 	Result.bDrawRelevance = IsShown(View);
 	Result.bShadowRelevance = IsShadowCast(View);
 	
-	const bool bAlwaysHasDynamicData = false;
-
 	// Only draw dynamically if we're drawing in wireframe or we're selected in the editor
-	Result.bDynamicRelevance = MustDrawMeshDynamically( *View ) || bAlwaysHasDynamicData;
+	Result.bDynamicRelevance = MustDrawMeshDynamically( *View );
 	Result.bStaticRelevance = !MustDrawMeshDynamically( *View );
 	
 	MaterialRelevance.SetPrimitiveViewRelevance(Result);

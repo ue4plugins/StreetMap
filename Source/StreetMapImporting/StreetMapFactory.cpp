@@ -1,4 +1,5 @@
 #include "StreetMapFactory.h"
+#include "EditorFramework/AssetImportData.h"
 #include "OSMFile.h"
 #include "StreetMap.h"
 
@@ -110,6 +111,9 @@ bool UStreetMapFactory::LoadFromOpenStreetMapXMLFile( UStreetMap* StreetMap, FSt
 			case FOSMFile::EOSMWayType::Road:	// @todo: Consider excluding "Road" from our data set, as it could be a highway that wasn't properly tagged in OSM yet
 				RoadType = EStreetMapRoadType::Street;
 				break;
+
+			default:
+				RoadType = EStreetMapRoadType::Other;
 		}
 
 		if( RoadType != EStreetMapRoadType::Other )

@@ -9,7 +9,7 @@ class STREETMAPRUNTIME_API AStreetMapActor : public AActor
 
 	/**  Component that represents a section of street map roads and buildings */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "StreetMap")
-		class UStreetMapComponent* StreetMapComponent;
+	class UStreetMapComponent* StreetMapComponent;
 
 public: 
 	FORCEINLINE class UStreetMapComponent* GetStreetMapComponent() { return StreetMapComponent; }

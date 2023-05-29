@@ -208,7 +208,7 @@ void UStreetMapComponent::GenerateMesh()
 	/////////////////////////////////////////////////////////
 	// Visual tweakables for generated Street Map mesh
 	//
-	const float RoadZ = MeshBuildSettings.RoadOffesetZ;
+	const float RoadZ = MeshBuildSettings.RoadOffsetZ;
 	const bool bWant3DBuildings = MeshBuildSettings.bWant3DBuildings;
 	const float BuildingLevelFloorFactor = MeshBuildSettings.BuildingLevelFloorFactor;
 	const bool bWantLitBuildings = MeshBuildSettings.bWantLitBuildings;

@@ -32,8 +32,13 @@ struct FStreetMapVertex
 	FColor Color;
 
 
-	/** Default constructor, leaves everything uninitialized */
-	FStreetMapVertex()
+	/** Default constructor */
+	FStreetMapVertex() :
+		Position(FVector3f::ZeroVector),
+		TextureCoordinate(FVector2f::ZeroVector),
+		TangentX(FVector3f::ZeroVector),
+		TangentZ(FVector3f::ZeroVector),
+		Color(FColor::White)	
 	{
 	}
 
