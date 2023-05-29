@@ -14,8 +14,9 @@ bool UStreetMapReimportFactory::CanReimport( UObject* Obj, TArray<FString>& OutF
 	if( StreetMap != nullptr )
 	{
 		OutFilenames.Add( StreetMap->AssetImportData->GetFirstFilename() );
+		return true;
 	}
-	return true;
+	return false;
 }
 
 
